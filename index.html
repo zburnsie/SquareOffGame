@@ -1,0 +1,1737 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Square Off: a party trivia game. Win duels, take your neighbors' squares, own the board.">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); box-sizing:border-box}
+body{margin:0; font:14px/1.4 system-ui,-apple-system,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Square Off</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one-screen game-show stage. Setup sheet, then the square board, then a two-clock duel arena. */
+:root{
+  color-scheme: dark;
+  --bg:#130f1f; --bg2:#1b1630; --panel:#231d39; --line:#3a3159;
+  --fg:#f5f0fb; --muted:#a69cc2;
+  --gold:#ffc94d; --good:#33d18f; --warn:#ff9f43; --bad:#ff5d6c;
+  --display:"Bricolage Grotesque","Arial Black",system-ui,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(ellipse 80% 60% at 50% -10%, #2b2150 0%, transparent 70%);
+  color:var(--fg); font-family:var(--body); font-size:15px; overflow:hidden;
+}
+#app{height:100%}
+.screen{height:100%; display:flex; flex-direction:column; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:14px;}
+button{font:inherit; cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold); outline-offset:2px}
+.btn{border:0; border-radius:10px; padding:10px 16px; font-weight:600; color:var(--fg); background:var(--panel); border:1px solid var(--line); display:inline-flex; align-items:center; gap:8px; justify-content:center; white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.35; cursor:not-allowed}
+.btn.gold{background:var(--gold); color:#2a1d00; border-color:var(--gold)}
+.btn.good{background:var(--good); color:#062417; border-color:var(--good)}
+.btn.warn{background:transparent; color:var(--warn); border:2px solid var(--warn)}
+.btn.ghost{background:transparent}
+.btn.big{padding:14px 26px; font-size:1.15rem; border-radius:12px}
+kbd{font-family:var(--mono); font-size:.72em; padding:2px 6px; border-radius:5px; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.18)}
+.btn.warn kbd{background:transparent}
+.eyebrow{text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:700; color:var(--muted)}
+.logo{font-family:var(--display); font-weight:800; letter-spacing:-.02em}
+.logo b{color:var(--gold)}
+
+/* ---------- Setup ---------- */
+.setup{overflow-y:auto; display:block}
+.hero{max-width:1100px; margin:8px auto 20px; display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px}
+.hero .logo{font-size:clamp(2.6rem, 7vw, 4.6rem); line-height:.95; margin:0}
+.hero p{margin:0; color:var(--muted); max-width:44ch; text-wrap:balance}
+.setup-grid{max-width:1100px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:18px}
+.card{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:18px}
+.card h2{font-family:var(--display); font-weight:800; font-size:1.25rem; margin:0 0 4px; display:flex; align-items:center; gap:10px}
+.card .hint{color:var(--muted); margin:0 0 14px; font-size:.9rem}
+.pill{font-family:var(--body); font-size:.72rem; font-weight:700; background:var(--panel); border:1px solid var(--line); border-radius:99px; padding:2px 9px; color:var(--muted)}
+.plist{display:flex; flex-direction:column; gap:8px}
+.prow{display:grid; grid-template-columns:14px minmax(0,1fr) minmax(0,1fr) 34px; gap:8px; align-items:center}
+.swatch{width:14px; height:34px; border-radius:4px}
+input,select,textarea{font:inherit; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; min-width:0; width:100%}
+textarea{min-height:120px; resize:vertical; font-family:var(--mono); font-size:.82rem; line-height:1.5}
+.x{background:transparent; border:1px solid var(--line); color:var(--muted); border-radius:8px; height:34px; font-size:1.1rem}
+.x:hover{color:var(--bad); border-color:var(--bad)}
+.row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.side{display:flex; flex-direction:column; gap:18px; min-width:0}
+.field{display:flex; flex-direction:column; gap:6px; flex:1; min-width:120px}
+.field label{font-size:.8rem; color:var(--muted); font-weight:600}
+.check{display:flex; gap:8px; align-items:center; color:var(--muted); font-size:.9rem; margin-top:12px}
+.check input{width:auto}
+.rules ol{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:7px; color:var(--muted); font-size:.92rem; line-height:1.45}
+.rules b{color:var(--fg)}
+.customs{display:flex; flex-direction:column; gap:6px; margin-top:12px}
+.custom-item{display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 6px 6px 10px; font-size:.9rem}
+.custom-item span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.startbar{max-width:1100px; margin:20px auto 8px; display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+.err{color:var(--bad); font-weight:600}
+@media (max-width:820px){ .setup-grid{grid-template-columns:minmax(0,1fr)} }
+
+/* ---------- Board ---------- */
+.bar{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between}
+.brand{display:flex; align-items:baseline; gap:14px}
+.brand .logo{font-size:1.8rem}
+.tag{color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.actions{display:flex; flex-wrap:wrap; gap:8px}
+.actions .btn{padding:7px 12px; font-size:.88rem}
+.callout{margin:14px 0 12px; min-height:58px; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:center; text-align:center}
+.callout .msg{font-size:1.15rem; font-weight:600; text-wrap:balance; max-width:60ch}
+.callout .msg em{font-style:normal; color:var(--gold)}
+.callout .sub{color:var(--muted); font-size:.9rem; width:100%}
+.board-wrap{flex:1; min-height:0; display:grid; place-items:center}
+.board{display:grid; --cs:100px}
+.cell{border:4px solid var(--bg); position:relative; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:4px; overflow:hidden; cursor:pointer; transition:opacity .2s, filter .2s; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.cell-name{font-family:var(--display); font-weight:800; font-size:calc(var(--cs) * .17); line-height:1.05; max-width:100%; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word}
+.cell-cat{font-size:calc(var(--cs) * .105); font-weight:600; opacity:.9; margin-top:3px; line-height:1.15; max-width:100%; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
+.cell-n{position:absolute; right:6px; bottom:4px; font-family:var(--mono); font-size:calc(var(--cs) * .09); opacity:.8}
+.cell.dim{opacity:.28; filter:saturate(.5)}
+.cell.chal{box-shadow:inset 0 0 0 4px var(--gold); filter:brightness(1.12)}
+.cell.target{outline:3px dashed #fff; outline-offset:-10px}
+.cell.target:hover{filter:brightness(1.2)}
+.cell.flash{filter:brightness(1.35); box-shadow:inset 0 0 0 4px #fff}
+
+/* ---------- Duel ---------- */
+.duel-screen{position:relative}
+.duel-head{text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px}
+.duel-cat{font-family:var(--display); font-weight:800; font-size:clamp(1.6rem, 4.5vw, 2.8rem); margin:0; line-height:1.05; text-wrap:balance}
+.arena{flex:1; min-height:0; display:grid; grid-template-columns:minmax(150px,1fr) minmax(0,2.6fr) minmax(150px,1fr); gap:16px; align-items:stretch; margin:14px 0}
+.pl{background:var(--bg2); border:2px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; text-align:center; transition:border-color .2s, box-shadow .2s, opacity .2s; opacity:.55; min-width:0}
+.pl.on{opacity:1; border-color:var(--c); box-shadow:0 0 0 4px color-mix(in srgb, var(--c) 35%, transparent), 0 0 60px color-mix(in srgb, var(--c) 30%, transparent)}
+.pl-role{font-size:.72rem; text-transform:uppercase; letter-spacing:.14em; font-weight:700; color:var(--muted)}
+.pl-name{font-family:var(--display); font-weight:800; font-size:clamp(1.2rem, 2.6vw, 2rem); line-height:1.05; color:var(--c); filter:brightness(1.35); word-break:break-word}
+.clock{font-family:var(--mono); font-weight:700; font-size:clamp(2.4rem, 6vw, 4.6rem); font-variant-numeric:tabular-nums; line-height:1}
+.clock.low{color:var(--bad); animation:pulse .5s ease-in-out infinite alternate}
+@keyframes pulse{to{opacity:.55}}
+.tbar{width:100%; height:8px; border-radius:99px; background:var(--bg); overflow:hidden}
+.tbar i{display:block; height:100%; background:var(--c); border-radius:99px}
+.stage{background:var(--bg2); border:1px solid var(--line); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:18px; text-align:center; min-width:0; min-height:0; overflow:hidden; position:relative}
+.turn{position:absolute; top:12px; left:0; right:0; font-weight:700; font-size:.95rem}
+.prompt{color:var(--muted); font-weight:600; font-size:clamp(1rem, 2.2vw, 1.4rem)}
+.clue{font-weight:800; line-height:1.1; max-width:100%; overflow-wrap:anywhere; text-wrap:balance}
+.clue.emoji{font-family:var(--emoji); font-size:clamp(64px, 15vmin, 190px); line-height:1.15}
+.clue.text{font-family:var(--display); font-size:clamp(34px, 8vmin, 104px)}
+.clue.count{font-family:var(--emoji); font-size:clamp(30px, 6.4vmin, 70px); letter-spacing:.12em; line-height:1.3; max-width:18ch}
+.clue.passing{opacity:.25}
+.reveal{min-height:1.4em; font-family:var(--display); font-weight:800; font-size:clamp(1.4rem, 4vw, 2.6rem); color:var(--gold)}
+.reveal.host{font-family:var(--body); font-weight:600; font-size:1rem; color:var(--muted)}
+.last{position:absolute; bottom:12px; left:0; right:0; color:var(--muted); font-size:.95rem}
+.last b{color:var(--good)}
+.controls{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
+.overlay{position:absolute; inset:0; background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(6px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:24px; z-index:5}
+.overlay h2{font-family:var(--display); font-weight:800; font-size:clamp(1.8rem, 5vw, 3.4rem); margin:0; line-height:1.05; text-wrap:balance}
+.overlay p{margin:0; color:var(--muted); font-size:1.1rem}
+.cd{font-family:var(--display); font-weight:800; font-size:clamp(6rem, 22vmin, 14rem); color:var(--gold); line-height:1}
+.who{color:#fff; border:0}
+@media (max-width:760px){
+  .arena{grid-template-columns:1fr 1fr; grid-template-rows:auto minmax(0,1fr); gap:10px}
+  .stage{grid-column:1 / -1; grid-row:2}
+  .pl{padding:10px}
+  .controls .btn.ghost{padding:7px 10px; font-size:.85rem}
+  kbd{display:none}
+}
+
+/* ---------- Champion ---------- */
+.champ{position:relative; align-items:center; justify-content:center; text-align:center}
+.champ canvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
+.champ-inner{position:relative; display:flex; flex-direction:column; align-items:center; gap:14px}
+.champ h1{font-family:var(--display); font-weight:800; font-size:clamp(3rem, 12vw, 8rem); margin:0; line-height:.95; color:var(--c); filter:brightness(1.3); text-wrap:balance}
+.champ p{margin:0; font-size:1.3rem; color:var(--muted)}
+/* ---------- Photo categories ---------- */
+.tabs{display:flex; gap:4px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:4px; margin-bottom:12px}
+.tab{flex:1; background:transparent; border:0; color:var(--muted); font-weight:600; padding:7px 10px; border-radius:7px}
+.tab[aria-selected="true"]{background:var(--panel); color:var(--fg)}
+.drop{display:flex; flex-direction:column; align-items:center; gap:4px; border:2px dashed var(--line); border-radius:12px; padding:18px 12px; text-align:center; color:var(--muted); cursor:pointer; font-size:.9rem}
+.drop.over,.drop:hover{border-color:var(--gold); color:var(--fg)}
+.drop strong{color:var(--gold); font-size:1rem}
+.drop input{display:none}
+.pgrid{display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; margin-top:10px; max-height:440px; overflow-y:auto}
+.pgrid:empty{display:none}
+.ph{position:relative; display:flex; flex-direction:column; gap:4px; min-width:0}
+.ph img{width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; background:var(--bg); display:block}
+.ph input{padding:5px 7px; font-size:.82rem}
+.ph input.missing{border-color:var(--warn)}
+.ph .x{position:absolute; top:4px; right:4px; width:26px; height:26px; background:rgba(0,0,0,.65); border:0; color:#fff; font-size:.95rem; line-height:1; padding:0}
+.busy{grid-column:1 / -1; color:var(--muted); font-size:.85rem}
+.custom-item .row{flex-wrap:nowrap; gap:6px}
+.custom-item .btn{padding:4px 10px; font-size:.82rem}
+.stage.has-photo{padding-block:42px 38px}
+.clue.photo{flex:1; min-height:0; width:100%; position:relative}
+.clue.photo img{position:absolute; inset:0; margin:auto; max-width:100%; max-height:100%; object-fit:contain; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.45)}
+.clue.photo.passing{opacity:.35}
+.clue.photo .missing-ph{position:absolute; inset:0; display:grid; place-items:center; font-size:1.2rem; color:var(--muted)}
+.clue.state{flex:1; min-height:0; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px}
+.clue.state svg{flex:1; min-height:0; width:100%; max-height:52vh; overflow:visible}
+.clue.state path{fill:var(--gold); stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; stroke-linejoin:round; filter:drop-shadow(0 6px 18px rgba(0,0,0,.45))}
+.clue.state .state-name{font-family:var(--display); font-weight:800; font-size:clamp(30px, 6.5vmin, 76px); line-height:1}
+.clue.state.passing{opacity:.35}
+@media (prefers-reduced-motion:reduce){ .clock.low{animation:none} *{transition:none!important} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ================= Clue packs ================= */
+const P = s => s.trim().split('\n').map(l => l.trim()).filter(Boolean).map(l => { const i = l.indexOf('|'); return i < 0 ? [l, ''] : [l.slice(0, i).trim(), l.slice(i + 1).trim()]; });
+
+const PARTY = [
+ {id:'actors', name:'Actors (text)', style:'text', prompt:'Who played…', items:P(`
+Jack in Titanic|Leonardo DiCaprio
+Forrest Gump|Tom Hanks
+Iron Man|Robert Downey Jr.
+Wolverine|Hugh Jackman
+Katniss Everdeen|Jennifer Lawrence
+Hermione Granger|Emma Watson
+Captain Jack Sparrow|Johnny Depp
+Neo in The Matrix|Keanu Reeves
+Wonder Woman (2017)|Gal Gadot
+Black Widow|Scarlett Johansson
+Barbie (2023)|Margot Robbie
+Ken (2023)|Ryan Gosling
+Elphaba in Wicked|Cynthia Erivo
+Glinda in Wicked|Ariana Grande
+Captain America|Chris Evans
+Thor|Chris Hemsworth
+Rocky Balboa|Sylvester Stallone
+The Terminator|Arnold Schwarzenegger
+Ethan Hunt in Mission: Impossible|Tom Cruise
+Han Solo and Indiana Jones|Harrison Ford
+Mrs. Doubtfire|Robin Williams
+Spider-Man in Homecoming|Tom Holland
+Wednesday Addams on Netflix|Jenna Ortega
+Black Panther|Chadwick Boseman
+Ace Ventura|Jim Carrey
+Mia in La La Land|Emma Stone
+Miranda Priestly in The Devil Wears Prada|Meryl Streep
+Elle Woods in Legally Blonde|Reese Witherspoon
+Buddy the Elf|Will Ferrell
+The Fresh Prince of Bel-Air|Will Smith
+Paul Atreides in Dune|Timothée Chalamet
+Dom Toretto in Fast & Furious|Vin Diesel
+Michael Scott in The Office|Steve Carell
+Rachel Green on Friends|Jennifer Aniston
+Hannah Montana|Miley Cyrus
+Austin Powers|Mike Myers
+Jason Bourne|Matt Damon
+Deadpool|Ryan Reynolds`)},
+ {id:'mammals', name:'Mammals (emoji)', style:'emoji', prompt:'Name the mammal', items:P(`
+🐘|Elephant
+🦒|Giraffe
+🦓|Zebra
+🦘|Kangaroo
+🦔|Hedgehog
+🦦|Otter
+🦥|Sloth
+🦛|Hippo
+🦏|Rhino
+🐫|Camel
+🦙|Llama
+🦡|Badger
+🦨|Skunk
+🦫|Beaver
+🦇|Bat
+🐻|Bear
+🐻‍❄️|Polar bear
+🐼|Panda
+🐨|Koala
+🦊|Fox
+🐺|Wolf
+🦝|Raccoon
+🐿️|Chipmunk
+🦌|Deer
+🦬|Bison
+🐆|Leopard
+🐅|Tiger
+🦁|Lion
+🦍|Gorilla
+🦧|Orangutan
+🐒|Monkey
+🐹|Hamster
+🐇|Rabbit
+🐁|Mouse
+🐖|Pig
+🐄|Cow
+🐎|Horse
+🐐|Goat
+🐑|Sheep
+🐳|Whale`)},
+ {id:'disney', name:'Disney Characters (text)', style:'text', prompt:'Which Disney character?', items:P(`
+Lost a glass slipper at the ball|Cinderella
+Super-long magic hair, lived in a tower|Rapunzel
+Ice powers, sings "Let It Go"|Elsa
+Snowman who likes warm hugs|Olaf
+Mermaid who wants legs|Ariel
+Lion cub who will be king|Simba
+Wooden boy whose nose grows|Pinocchio
+Baby elephant with giant ears|Dumbo
+Fairy who travels with Peter Pan|Tinker Bell
+Villain who wants a puppy-fur coat|Cruella de Vil
+Sea witch who steals Ariel's voice|Ursula
+Big blue wish-granter in a lamp|Genie
+Fell asleep after touching a spindle|Aurora
+Bit the poisoned apple|Snow White
+Honey-loving bear|Winnie the Pooh
+Bouncy striped tiger|Tigger
+Gloomy gray donkey|Eeyore
+Mouse in red shorts|Mickey Mouse
+Duck in a sailor shirt|Donald Duck
+Wayfinder from Motunui|Moana
+Demigod with a magic fishhook|Maui
+"Hakuna Matata" warthog|Pumbaa
+Fought in the army disguised as a man|Mulan
+"To infinity and beyond!"|Buzz Lightyear
+Cowboy sheriff toy|Woody
+Forgetful blue fish|Dory
+Big blue furry monster at Monsters, Inc.|Sulley
+One-eyed green monster|Mike Wazowski
+Blue alien, Experiment 626|Stitch
+Race car who says "Ka-chow!"|Lightning McQueen
+Bookworm who falls for the Beast|Belle
+Talking candlestick|Lumiere
+"We don't talk about ___"|Bruno
+Waitress who kissed a frog in New Orleans|Tiana
+Joy's teammate who makes everyone blue|Sadness
+Street rat with a flying carpet|Aladdin
+Lion cub's evil uncle|Scar
+Wears a red cape and a tiara: "the Incredible" mom|Elastigirl`)},
+ {id:'athletes', name:'Athletes (text)', style:'text', prompt:'Name the athlete', items:P(`
+Most Olympic gold medals ever (swimming)|Michael Phelps
+Chicago Bulls legend, "Air"|Michael Jordan
+"King James" of the NBA|LeBron James
+Quarterback with 7 Super Bowl wins|Tom Brady
+Fastest man ever, "Lightning"|Usain Bolt
+Argentina's 2022 World Cup captain|Lionel Messi
+Portuguese soccer star "CR7"|Cristiano Ronaldo
+Golfer nicknamed "Tiger"|Tiger Woods
+23 Grand Slam singles titles|Serena Williams
+Most decorated gymnast in history|Simone Biles
+"The Great One" of hockey|Wayne Gretzky
+"Float like a butterfly, sting like a bee"|Muhammad Ali
+Chiefs QB with 3 Super Bowl rings|Patrick Mahomes
+Warriors sharpshooter, #30|Stephen Curry
+Lakers' "Black Mamba"|Kobe Bryant
+Broke baseball's color barrier in 1947|Jackie Robinson
+Yankees slugger "The Bambino"|Babe Ruth
+Dodgers two-way star from Japan|Shohei Ohtani
+College scoring record holder from Iowa|Caitlin Clark
+Skateboarder who landed the first 900|Tony Hawk
+Snowboarder "The Flying Tomato"|Shaun White
+Serbian tennis star "Nole"|Novak Djokovic
+Swiss tennis great with 20 Slams|Roger Federer
+Spain's "King of Clay"|Rafael Nadal
+Brazilian legend with 3 World Cups|Pelé
+NBA giant known as "Shaq"|Shaquille O'Neal
+Chiefs tight end engaged to Taylor Swift|Travis Kelce
+Yankees home run king, #99|Aaron Judge
+NFL's "Prime Time"|Deion Sanders
+"The Greek Freak"|Giannis Antetokounmpo
+Won 4 golds at the 1936 Berlin Olympics|Jesse Owens
+Undefeated boxer known as "Money"|Floyd Mayweather
+Swimmer with 9 Olympic golds, distance queen|Katie Ledecky
+Slovenian NBA star traded to the Lakers|Luka Dončić`)},
+ {id:'produce', name:'Fruits & Veggies (emoji)', style:'emoji', prompt:'Name it', items:P(`
+🍎|Apple
+🍐|Pear
+🍊|Orange
+🍋|Lemon
+🍌|Banana
+🍉|Watermelon
+🍇|Grapes
+🍓|Strawberry
+🫐|Blueberries
+🍈|Cantaloupe
+🍒|Cherries
+🍑|Peach
+🥭|Mango
+🍍|Pineapple
+🥥|Coconut
+🥝|Kiwi
+🍅|Tomato
+🍆|Eggplant
+🥑|Avocado
+🥦|Broccoli
+🥬|Lettuce
+🥒|Cucumber
+🌶️|Chili pepper
+🫑|Bell pepper
+🌽|Corn
+🥕|Carrot
+🧄|Garlic
+🧅|Onion
+🥔|Potato
+🍠|Sweet potato
+🍄|Mushroom
+🫒|Olive
+🥜|Peanuts`)},
+ {id:'kitchen', name:'Kitchen Items (emoji)', style:'auto', prompt:'Name the kitchen item', items:P(`
+🍳|Frying pan
+🥄|Spoon
+🔪|Knife
+🥢|Chopsticks
+🫖|Teapot
+☕|Mug
+🥣|Bowl
+🍽️|Plate
+🧂|Salt shaker
+🫙|Jar
+🧽|Sponge
+🧻|Paper towels
+🍷|Wine glass
+Makes bread crispy|Toaster
+Spins fruit into smoothies|Blender
+Heats leftovers in 30 seconds|Microwave
+Flips pancakes|Spatula
+Shreds cheese|Grater
+Drains pasta|Colander
+Opens soup cans|Can opener
+Flattens dough|Rolling pin
+Beats eggs|Whisk
+Whistles when the water boils|Kettle
+Crushes garlic cloves|Garlic press
+Scoops soup into bowls|Ladle
+Keeps the milk cold|Refrigerator
+Washes the dishes for you|Dishwasher
+Cookies bake on it|Baking sheet
+Peels potatoes|Peeler
+Grabs hot food off the grill|Tongs
+Protects your hand from a hot pan|Oven mitt
+Times the eggs|Kitchen timer
+Cuts pizza into slices|Pizza cutter`)},
+ {id:'logos', name:'Logos (text)', style:'text', prompt:'Whose logo is this?', items:P(`
+Golden arches|McDonald's
+An apple with a bite out of it|Apple
+A swoosh|Nike
+Green mermaid with two tails|Starbucks
+Red bullseye|Target
+Three slanted stripes|Adidas
+Leaping cat|Puma
+Yellow-and-red seashell|Shell
+Arrow smiling from A to Z|Amazon
+Prancing black horse|Ferrari
+Charging gold bull|Lamborghini
+Three-pointed star in a circle|Mercedes-Benz
+Four linked rings|Audi
+Blue-and-white circle in quarters|BMW
+Gold bowtie|Chevrolet
+Three overlapping ovals|Toyota
+Bearded colonel's face|KFC
+Red-haired girl with pigtails|Wendy's
+Castle with a shooting-star arc|Disney
+Peacock with six colorful feathers|NBC
+Red rectangle with a white play button|YouTube
+White ghost on yellow|Snapchat
+White lowercase "f" on blue|Facebook
+Purple bell|Taco Bell
+Girl with an umbrella: "When it rains it pours"|Morton Salt
+Red-and-white swirly cursive|Coca-Cola
+Red, white, and blue circle with a wave|Pepsi
+Little green crocodile|Lacoste
+Polo player on a horse|Ralph Lauren
+Man made of white tires|Michelin
+Roaring lion before movies|MGM
+Snowy mountain peak circled by stars|Paramount
+Rainbow-colored camera outline|Instagram
+Blue bird (before it became an X)|Twitter
+Five interlocking colored rings|Olympics`)},
+ {id:'ocean', name:'Ocean Animals (emoji)', style:'auto', prompt:'Name the sea creature', items:P(`
+🐙|Octopus
+🦑|Squid
+🦀|Crab
+🦞|Lobster
+🦐|Shrimp
+🐬|Dolphin
+🦈|Shark
+🐢|Sea turtle
+🦭|Seal
+🐡|Pufferfish
+🦪|Oyster
+🐳|Whale
+Whale with a tusk like a unicorn horn|Narwhal
+Five arms, can regrow one|Starfish
+Floating blob with stingers and no brain|Jellyfish
+Flat fish with a whip-like tail|Stingray
+The dads carry the babies|Seahorse
+Black-and-white "killer whale"|Orca
+Gentle "sea cow"|Manatee
+Spiny ball on the sea floor|Sea urchin
+Giant tusks, naps on Arctic ice|Walrus
+Orange-and-white fish living in an anemone|Clownfish
+Largest animal that ever lived|Blue whale
+Snake-like fish that can be electric|Eel
+Shark with a hammer-shaped head|Hammerhead shark
+Floats on its back, cracks shells with rocks|Sea otter
+Fish that swims upstream to spawn|Salmon
+Tiny shrimp-like food for whales|Krill
+Fish that glides above the waves|Flying fish
+Biggest fish in the sea|Whale shark
+Eight arms, three hearts, blue blood|Octopus`)},
+ {id:'songs', name:'Finish the Song Title', style:'text', prompt:'Finish the song title', items:P(`
+Rolling in the ___ (Adele, 2011)|Deep
+Shake It ___ (Taylor Swift, 2014)|Off
+Uptown ___ (Mark Ronson ft. Bruno Mars, 2014)|Funk
+Blinding ___ (The Weeknd, 2019)|Lights
+Shape of ___ (Ed Sheeran, 2017)|You
+Old Town ___ (Lil Nas X, 2019)|Road
+Watermelon ___ (Harry Styles, 2019)|Sugar
+drivers ___ (Olivia Rodrigo, 2021)|license
+good 4 ___ (Olivia Rodrigo, 2021)|u
+Can't Stop the ___ (Justin Timberlake, 2016)|Feeling!
+Single ___ (Beyoncé, 2008)|Ladies
+Party in the ___ (Miley Cyrus, 2009)|U.S.A.
+Wrecking ___ (Miley Cyrus, 2013)|Ball
+Anti-___ (Taylor Swift, 2022)|Hero
+Cruel ___ (Taylor Swift, 2019)|Summer
+Love ___ (Taylor Swift, 2008)|Story
+Poker ___ (Lady Gaga, 2008)|Face
+Bad ___ (Lady Gaga, 2009)|Romance
+Die With a ___ (Lady Gaga & Bruno Mars, 2024)|Smile
+Don't Start ___ (Dua Lipa, 2019)|Now
+Bad ___ (Billie Eilish, 2019)|Guy
+Call Me ___ (Carly Rae Jepsen, 2012)|Maybe
+Somebody That I Used to ___ (Gotye, 2011)|Know
+Hey, Soul ___ (Train, 2009)|Sister
+I Gotta ___ (Black Eyed Peas, 2009)|Feeling
+Teenage ___ (Katy Perry, 2010)|Dream
+California ___ (Katy Perry, 2010)|Gurls
+Thinking Out ___ (Ed Sheeran, 2014)|Loud
+All About That ___ (Meghan Trainor, 2014)|Bass
+See You ___ (Wiz Khalifa ft. Charlie Puth, 2015)|Again
+Hotline ___ (Drake, 2015)|Bling
+Party Rock ___ (LMFAO, 2011)|Anthem
+Moves Like ___ (Maroon 5, 2011)|Jagger
+Just the Way You ___ (Bruno Mars, 2010)|Are
+We Found ___ (Rihanna, 2011)|Love
+As It ___ (Harry Styles, 2022)|Was
+Kill ___ (SZA, 2022)|Bill
+Stay With ___ (Sam Smith, 2014)|Me
+Counting ___ (OneRepublic, 2013)|Stars
+Pumped Up ___ (Foster the People, 2011)|Kicks
+Ho ___ (The Lumineers, 2012)|Hey
+Hips Don't ___ (Shakira, 2006)|Lie
+Gangnam ___ (PSY, 2012)|Style
+A Bar ___ (Tipsy) (Shaboozey, 2024)|Song`)},
+ {id:'statecaps', name:'State Capitals', style:'state', prompt:'Name the capital', items:P(`
+Alabama|Montgomery
+Alaska|Juneau
+Arizona|Phoenix
+Arkansas|Little Rock
+California|Sacramento
+Colorado|Denver
+Connecticut|Hartford
+Delaware|Dover
+Florida|Tallahassee
+Georgia|Atlanta
+Hawaii|Honolulu
+Idaho|Boise
+Illinois|Springfield
+Indiana|Indianapolis
+Iowa|Des Moines
+Kansas|Topeka
+Kentucky|Frankfort
+Louisiana|Baton Rouge
+Maine|Augusta
+Maryland|Annapolis
+Massachusetts|Boston
+Michigan|Lansing
+Minnesota|Saint Paul
+Mississippi|Jackson
+Missouri|Jefferson City
+Montana|Helena
+Nebraska|Lincoln
+Nevada|Carson City
+New Hampshire|Concord
+New Jersey|Trenton
+New Mexico|Santa Fe
+New York|Albany
+North Carolina|Raleigh
+North Dakota|Bismarck
+Ohio|Columbus
+Oklahoma|Oklahoma City
+Oregon|Salem
+Pennsylvania|Harrisburg
+Rhode Island|Providence
+South Carolina|Columbia
+South Dakota|Pierre
+Tennessee|Nashville
+Texas|Austin
+Utah|Salt Lake City
+Vermont|Montpelier
+Virginia|Richmond
+Washington|Olympia
+West Virginia|Charleston
+Wisconsin|Madison
+Wyoming|Cheyenne`)},
+ {id:'stinky', name:'Things That Smell Bad', style:'auto', prompt:'What stinks?', items:P(`
+🦨|Skunk
+🧦|Dirty socks
+🗑️|Garbage
+💩|Poop
+💨|Fart
+🥚🤢|Rotten eggs
+🐟🤢|Old fish
+🧀🤢|Stinky cheese
+🥛🤢|Spoiled milk
+👟💦|Sweaty sneakers
+🍞🦠|Moldy bread
+🐕💧|Wet dog
+🦶|Stinky feet
+🚽|Toilet
+🧅|Onions
+🍿🔥|Burnt popcorn
+🐄💩|Manure
+🚬|Cigarette smoke
+👄☀️|Morning breath
+Spiky fruit banned on some trains in Asia|Durian
+Veggie that makes your pee smell funny|Asparagus
+Where the cat does its business|Litter box
+A baby's full ___|Diaper
+Giant flower that smells like rotting meat|Corpse flower
+Element that smells like rotten eggs|Sulfur
+Outdoor toilet at a music festival|Porta-potty
+Your armpits after a workout|B.O.
+Big metal bin behind a restaurant|Dumpster
+The gym bag you forgot in the car|Gym clothes
+Under the street, where the drains go|Sewer`)},
+ {id:'geography', name:'Geography', style:'state', shapes:'countries', prompt:'Name the country', items:[["Afghanistan", "Afghanistan"], ["Argentina", "Argentina"], ["Australia", "Australia"], ["Austria", "Austria"], ["Brazil", "Brazil"], ["Canada", "Canada"], ["Chile", "Chile"], ["China", "China"], ["Colombia", "Colombia"], ["Croatia", "Croatia"], ["Cuba", "Cuba"], ["Cyprus", "Cyprus"], ["Denmark", "Denmark"], ["Dominican Republic", "Dominican Republic"], ["Ecuador", "Ecuador"], ["Egypt", "Egypt"], ["Ethiopia", "Ethiopia"], ["Finland", "Finland"], ["France", "France"], ["Germany", "Germany"], ["Greece", "Greece"], ["Haiti", "Haiti"], ["Iceland", "Iceland"], ["India", "India"], ["Indonesia", "Indonesia"], ["Iran", "Iran"], ["Ireland", "Ireland"], ["Israel", "Israel"], ["Italy", "Italy"], ["Jamaica", "Jamaica"], ["Japan", "Japan"], ["Kenya", "Kenya"], ["Madagascar", "Madagascar"], ["Malaysia", "Malaysia"], ["Mexico", "Mexico"], ["Mongolia", "Mongolia"], ["Morocco", "Morocco"], ["Nepal", "Nepal"], ["Netherlands", "Netherlands"], ["New Zealand", "New Zealand"], ["Nigeria", "Nigeria"], ["North Korea", "North Korea"], ["Norway", "Norway"], ["Pakistan", "Pakistan"], ["Panama", "Panama"], ["Peru", "Peru"], ["Philippines", "Philippines"], ["Poland", "Poland"], ["Portugal", "Portugal"], ["Russia", "Russia"], ["Saudi Arabia", "Saudi Arabia"], ["Somalia", "Somalia"], ["South Africa", "South Africa"], ["South Korea", "South Korea"], ["Spain", "Spain"], ["Sri Lanka", "Sri Lanka"], ["Sweden", "Sweden"], ["Switzerland", "Switzerland"], ["Taiwan", "Taiwan"], ["Thailand", "Thailand"], ["Turkey", "Turkey"], ["Ukraine", "Ukraine"], ["United Kingdom", "United Kingdom"], ["Venezuela", "Venezuela"], ["Vietnam", "Vietnam"]]},
+];
+const BUILTIN = [
+ ...PARTY,
+ {id:'flags', name:'Flags', style:'emoji', prompt:'Which country?', items:P(`
+🇫🇷|France
+🇯🇵|Japan
+🇧🇷|Brazil
+🇨🇦|Canada
+🇩🇪|Germany
+🇮🇹|Italy
+🇲🇽|Mexico
+🇬🇧|United Kingdom
+🇪🇸|Spain
+🇨🇳|China
+🇮🇳|India
+🇰🇷|South Korea
+🇦🇺|Australia
+🇸🇪|Sweden
+🇳🇴|Norway
+🇬🇷|Greece
+🇮🇪|Ireland
+🇳🇱|Netherlands
+🇨🇭|Switzerland
+🇦🇷|Argentina
+🇯🇲|Jamaica
+🇹🇷|Turkey
+🇵🇹|Portugal
+🇿🇦|South Africa
+🇪🇬|Egypt
+🇳🇬|Nigeria
+🇵🇱|Poland
+🇺🇦|Ukraine
+🇫🇮|Finland
+🇩🇰|Denmark
+🇨🇺|Cuba
+🇮🇱|Israel
+🇳🇿|New Zealand
+🇰🇪|Kenya
+🇻🇳|Vietnam
+🇨🇴|Colombia
+🇧🇪|Belgium
+🇦🇹|Austria
+🇵🇭|Philippines
+🇹🇭|Thailand`)},
+ {id:'movies', name:'Emoji Movies', style:'emoji', prompt:'Name the movie', items:P(`
+🦁👑|The Lion King
+🕷️🧑|Spider-Man
+❄️👸⛄|Frozen
+🦈🏖️|Jaws
+🧸🤠🚀|Toy Story
+🐠🔍|Finding Nemo
+🚢🧊💔|Titanic
+🦖🏝️|Jurassic Park
+👻🚫|Ghostbusters
+🏠🎈👴|Up
+💍🌋🧙‍♂️|The Lord of the Rings
+⚡👓🧙|Harry Potter
+🤖🌱🗑️|WALL-E
+🐀👨‍🍳|Ratatouille
+🦇🧔🌃|Batman
+🐼🥋|Kung Fu Panda
+🍫🏭🎫|Charlie and the Chocolate Factory
+👽📞🏠|E.T.
+🚗⚡🏁|Cars
+👸🐸|The Princess and the Frog
+🧞‍♂️🪔|Aladdin
+🦍🏙️|King Kong
+🧜‍♀️🐚|The Little Mermaid
+🐘👂✈️|Dumbo
+🌪️🏠👠|The Wizard of Oz
+🧑‍🚀🔴🥔|The Martian
+🏴‍☠️🌊⚓|Pirates of the Caribbean
+💚👹🧅|Shrek
+😊😢😡🤢😨|Inside Out
+⏰🚗⚡|Back to the Future
+🧊🐿️🌰|Ice Age
+🦸‍♂️👨‍👩‍👧‍👦|The Incredibles
+🍝🐶❤️|Lady and the Tramp
+🐝🎬|Bee Movie
+🌹👹|Beauty and the Beast
+🍎👸🪞|Snow White
+🥊🇺🇸|Rocky
+💀🎸🌼|Coco
+🚂❄️🎄|The Polar Express
+🧙‍♀️👠💚|Wicked`)},
+ {id:'capitals', name:'World Capitals', style:'text', prompt:'Capital city of', items:P(`
+France|Paris
+Japan|Tokyo
+Italy|Rome
+Spain|Madrid
+Germany|Berlin
+Canada|Ottawa
+Australia|Canberra
+Egypt|Cairo
+Russia|Moscow
+China|Beijing
+United Kingdom|London
+Mexico|Mexico City
+Brazil|Brasília
+Argentina|Buenos Aires
+Ireland|Dublin
+Greece|Athens
+Portugal|Lisbon
+Norway|Oslo
+Sweden|Stockholm
+Denmark|Copenhagen
+Netherlands|Amsterdam
+Austria|Vienna
+Poland|Warsaw
+Thailand|Bangkok
+South Korea|Seoul
+India|New Delhi
+Kenya|Nairobi
+Peru|Lima
+Cuba|Havana
+Turkey|Ankara
+Hungary|Budapest
+Czech Republic|Prague
+Finland|Helsinki
+Belgium|Brussels
+Switzerland|Bern
+Philippines|Manila
+Vietnam|Hanoi
+Indonesia|Jakarta
+Chile|Santiago
+Iceland|Reykjavík`)},
+ {id:'animals', name:'Animals', style:'emoji', prompt:'Name the animal', items:P(`
+🦘|Kangaroo
+🦒|Giraffe
+🦓|Zebra
+🦔|Hedgehog
+🦦|Otter
+🦥|Sloth
+🦩|Flamingo
+🦚|Peacock
+🐙|Octopus
+🦑|Squid
+🦀|Crab
+🦞|Lobster
+🐢|Turtle
+🦎|Lizard
+🐊|Crocodile
+🦛|Hippo
+🦏|Rhino
+🐫|Camel
+🦙|Llama
+🦡|Badger
+🦨|Skunk
+🦫|Beaver
+🦇|Bat
+🦉|Owl
+🦅|Eagle
+🐧|Penguin
+🦭|Seal
+🐳|Whale
+🐬|Dolphin
+🦈|Shark
+🐝|Bee
+🐞|Ladybug
+🦋|Butterfly
+🐌|Snail
+🦂|Scorpion
+🦃|Turkey
+🦜|Parrot
+🦢|Swan
+🦌|Deer
+🐿️|Chipmunk`)},
+ {id:'food', name:'Food & Drink', style:'emoji', prompt:'Name it', items:P(`
+🥐|Croissant
+🥨|Pretzel
+🥯|Bagel
+🧇|Waffle
+🥞|Pancakes
+🌮|Taco
+🌯|Burrito
+🍣|Sushi
+🥟|Dumpling
+🍜|Ramen
+🥥|Coconut
+🥝|Kiwi
+🍍|Pineapple
+🥭|Mango
+🍆|Eggplant
+🥑|Avocado
+🥦|Broccoli
+🌶️|Chili pepper
+🧄|Garlic
+🥕|Carrot
+🌽|Corn
+🍄|Mushroom
+🥜|Peanuts
+🧀|Cheese
+🍩|Donut
+🧁|Cupcake
+🎂|Birthday cake
+🍿|Popcorn
+🥧|Pie
+🍫|Chocolate
+🍯|Honey
+🧋|Bubble tea
+🫐|Blueberries
+🍒|Cherries
+🍑|Peach
+🍐|Pear
+🍋|Lemon
+🥖|Baguette
+🥗|Salad
+🍉|Watermelon`)},
+ {id:'phrases', name:'Finish the Phrase', style:'text', prompt:'Fill in the blank', items:P(`
+Piece of ___|cake
+Break a ___|leg
+Once in a blue ___|moon
+The early bird catches the ___|worm
+Bite the ___|bullet
+Under the ___|weather
+Spill the ___|beans
+Cat got your ___?|tongue
+Let the cat out of the ___|bag
+Cost an arm and a ___|leg
+Barking up the wrong ___|tree
+The ball is in your ___|court
+Don't cry over spilled ___|milk
+Actions speak louder than ___|words
+When pigs ___|fly
+A penny for your ___|thoughts
+Better late than ___|never
+Kill two birds with one ___|stone
+Every cloud has a silver ___|lining
+Curiosity killed the ___|cat
+Back to the drawing ___|board
+The whole nine ___|yards
+Hold your ___|horses
+Skating on thin ___|ice
+Rome wasn't built in a ___|day
+Two peas in a ___|pod
+Easy as ___|pie
+Head over ___|heels
+Burn the midnight ___|oil
+Beat around the ___|bush
+Go the extra ___|mile
+Jump on the ___|bandwagon
+Wild goose ___|chase
+Read between the ___|lines
+Hit the nail on the ___|head
+Don't judge a book by its ___|cover
+Many hands make light ___|work
+The best of both ___|worlds`)},
+ {id:'states', name:'State Abbreviations', style:'text', prompt:'Which US state?', items:P(`
+AK|Alaska
+AL|Alabama
+AR|Arkansas
+AZ|Arizona
+CT|Connecticut
+DE|Delaware
+HI|Hawaii
+IA|Iowa
+ID|Idaho
+IL|Illinois
+IN|Indiana
+KS|Kansas
+KY|Kentucky
+LA|Louisiana
+MA|Massachusetts
+MD|Maryland
+ME|Maine
+MI|Michigan
+MN|Minnesota
+MO|Missouri
+MS|Mississippi
+MT|Montana
+NE|Nebraska
+NV|Nevada
+NC|North Carolina
+OK|Oklahoma
+OR|Oregon
+PA|Pennsylvania
+TN|Tennessee
+VA|Virginia
+VT|Vermont
+WA|Washington
+WI|Wisconsin
+WV|West Virginia
+WY|Wyoming
+NM|New Mexico
+NH|New Hampshire
+NJ|New Jersey
+SC|South Carolina
+GA|Georgia`)},
+ {id:'elements', name:'Element Symbols', style:'text', prompt:'Which element?', items:P(`
+H|Hydrogen
+He|Helium
+Li|Lithium
+C|Carbon
+N|Nitrogen
+O|Oxygen
+Na|Sodium
+Mg|Magnesium
+Al|Aluminum
+Si|Silicon
+P|Phosphorus
+S|Sulfur
+Cl|Chlorine
+K|Potassium
+Ca|Calcium
+Fe|Iron
+Cu|Copper
+Zn|Zinc
+Ag|Silver
+Au|Gold
+Hg|Mercury
+Pb|Lead
+Sn|Tin
+Ne|Neon
+Ar|Argon
+U|Uranium
+Ni|Nickel
+Pt|Platinum
+I|Iodine
+F|Fluorine
+Ti|Titanium
+Co|Cobalt
+Kr|Krypton
+Rn|Radon
+B|Boron
+W|Tungsten
+Mn|Manganese
+Cr|Chromium`)},
+ {id:'spanish', name:'Spanish to English', style:'text', prompt:'In English, please', items:P(`
+gato|cat
+perro|dog
+casa|house
+agua|water
+rojo|red
+libro|book
+manzana|apple
+leche|milk
+sol|sun
+luna|moon
+playa|beach
+coche|car
+mesa|table
+silla|chair
+queso|cheese
+pan|bread
+hermano|brother
+amigo|friend
+cielo|sky
+árbol|tree
+flor|flower
+verde|green
+azul|blue
+grande|big
+pequeño|small
+feliz|happy
+noche|night
+zapato|shoe
+ventana|window
+puerta|door
+cocina|kitchen
+pollo|chicken
+caballo|horse
+pájaro|bird
+pez|fish
+fuego|fire
+nieve|snow
+cumpleaños|birthday
+pastel|cake
+regalo|gift`)},
+ {id:'math', name:'Quick Math', style:'text', gen(){
+    const k = rand(3);
+    if (k === 0){ const a = 2 + rand(11), b = 2 + rand(11); return {q:`${a} × ${b}`, a:String(a*b), p:'Solve it'}; }
+    if (k === 1){ const a = 12 + rand(78), b = 12 + rand(78); return {q:`${a} + ${b}`, a:String(a+b), p:'Solve it'}; }
+    const a = 30 + rand(70), b = 5 + rand(a - 10); return {q:`${a} − ${b}`, a:String(a-b), p:'Solve it'};
+ }},
+ {id:'scramble', name:'Unscramble', style:'text', gen(){
+    const w = pick(WORDS); let s = w;
+    for (let t = 0; t < 20 && s === w; t++) s = shuffle([...w]).join('');
+    return {q:s, a:w, p:'Unscramble the word'};
+ }},
+ {id:'count', name:'Count Fast', style:'count', gen(){
+    const pool = shuffle(['🎈','🎂','🍕','🐸','⭐','🍩','🎁','🦄','🌮','🐝','🍓','🐙']);
+    const t = pool[0], n = 3 + rand(10), m = 4 + rand(8);
+    const arr = shuffle([...Array(n).fill(t), ...Array.from({length:m}, () => pool[1 + rand(2)])]);
+    return {q:arr.join(''), a:String(n), p:`How many ${t}?`};
+ }},
+];
+const WORDS = 'PARTY CANDLE BALLOON PRESENT GUITAR PLANET ORANGE GARDEN PIRATE ROCKET CASTLE WINTER SUMMER PENCIL BASKET MONKEY DRAGON CAMERA JUNGLE TURTLE PICNIC ISLAND SPIDER BUTTER COOKIE FOREST CHERRY PUZZLE MAGNET TICKET MARBLE HAMMER BRIDGE CACTUS FINGER JACKET KITTEN LADDER PILLOW SCHOOL TOMATO WALLET YELLOW ZIPPER BANANA CIRCUS DONKEY GOBLIN HELMET KETTLE LIZARD MUFFIN NAPKIN PEPPER RABBIT SALMON TEAPOT VIOLIN WIZARD CONFETTI'.split(' ');
+
+const COLORS = ['#e4572e','#2f8fd0','#8a4fd8','#17966f','#d6338a','#c98a12','#3a5fd9','#c2410c','#0f8f99','#b5179e','#5f8f1b','#d9485f','#5b6ee1','#a16207','#0e7490','#9d4edd','#15803d','#be123c','#2563eb','#b7791f','#7c3aed','#0891b2','#c026d3','#4d7c0f','#db2777','#0369a1','#9333ea','#047857','#ea580c','#4f46e5'];
+
+/* ================= Helpers ================= */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function rand(n){ return Math.floor(Math.random() * n); }
+function pick(a){ return a[rand(a.length)]; }
+function shuffle(a){ a = [...a]; for (let i = a.length - 1; i > 0; i--){ const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+let custom = store.get('sq_custom') || [];
+let PHOTO_CATS = [];
+const PB = {}, pbLoading = {};
+function loadPB(id){
+  if (pbLoading[id]) return pbLoading[id];
+  return pbLoading[id] = fetch(`photos/${id}.json`).then(r => r.json()).then(a => { PB[id] = a; if (typeof D !== 'undefined' && D && D.cat === id) paintDuel(); })
+    .catch(() => { delete pbLoading[id]; });
+}
+function pbUrl(q){ const [, id, i] = q.split(':'); if (!PB[id]){ loadPB(id); return null; } return PB[id][+i]; }
+fetch('photos/index.json').then(r => r.json()).then(async list => {
+  PHOTO_CATS = list.map(c => ({id:c.id, name:c.name, style:'photo', prompt:c.prompt, items:c.answers.map((a, i) => [`pb:${c.id}:${i}`, a])}));
+  if (document.querySelector('.setup')) renderSetup();
+  if (document.querySelector('#board')) paintBoard();
+  for (const c of list) await loadPB(c.id);
+}).catch(() => {});
+const allCats = () => [...PHOTO_CATS, ...BUILTIN, ...custom];
+const cat = id => allCats().find(c => c.id === id) || BUILTIN[0];
+const catName = id => cat(id).name;
+const saveCustom = () => store.set('sq_custom', custom);
+
+/* ================= Sound ================= */
+let soundOn = store.get('sq_sound') ?? true, ac = null;
+function tone(f, d, type = 'sine', vol = .15, delay = 0){
+  if (!soundOn) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d + .02);
+  } catch {}
+}
+const sfx = {
+  ding(){ tone(880, .12, 'triangle', .18); tone(1320, .22, 'triangle', .18, .08); },
+  tick(){ tone(1100, .05, 'square', .05); },
+  blip(){ tone(660, .05, 'triangle', .08); },
+  pass(){ tone(330, .18, 'triangle', .14); },
+  go(){ tone(523, .1, 'triangle', .15); tone(784, .25, 'triangle', .15, .1); },
+  buzz(){ tone(110, .9, 'sawtooth', .2); tone(116, .9, 'sawtooth', .12); },
+  fanfare(){ [523,659,784,1047].forEach((f,i) => tone(f, .35, 'triangle', .16, i * .14)); },
+};
+
+/* ================= State ================= */
+const PHOTO_FOR = {actors:'ph-actors', mammals:'ph-animals', disney:'ph-disney-characters', athletes:'ph-famous-athletes', produce:'ph-fruits-and-vegetables', kitchen:'ph-kitchen-items', logos:'ph-logos', ocean:'ph-ocean-animals'};
+const defaultDraft = () => ({
+  example: true,
+  rows: ['Birthday Star','Alex','Sam','Jordan','Riley','Casey','Morgan','Taylor','Jamie','Drew','Quinn'].map((n, i) => ({name:n, cat:PHOTO_FOR[PARTY[i].id] || PARTY[i].id})),
+  seconds: 30, pass: 3, shuffleSeats: true,
+});
+let draft = store.get('sq_draft');
+if (!draft || draft.example) draft = defaultDraft();
+let S = store.get('sq_game');          // game in progress
+let D = null;                          // live duel
+let flashId = null, picking = false;
+const saveDraft = () => store.set('sq_draft', draft);
+const saveGame = () => store.set('sq_game', S);
+const pl = id => S.players.find(p => p.id === id);
+if (!draft.photoMig){ draft.rows.forEach(r => { if (PHOTO_FOR[r.cat]) r.cat = PHOTO_FOR[r.cat]; }); draft.photoMig = true; saveDraft(); }
+if (S && !S.photoMig){ S.players.forEach(p => { if (PHOTO_FOR[p.cat]) p.cat = PHOTO_FOR[p.cat]; }); S.photoMig = true; saveGame(); }
+const alivePlayers = () => S.players.filter(p => p.alive);
+
+function render(){
+  if (!S || S.phase === 'setup') return renderSetup();
+  if (S.phase === 'duel' && D) return renderDuel();
+  if (S.phase === 'champ') return renderChamp();
+  S.phase = 'board'; renderBoard();
+}
+
+/* ================= Setup ================= */
+function catOptions(sel){
+  const opt = c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`;
+  const u = custom.length ? `<optgroup label="Your photo & custom categories">${custom.map(opt).join('')}</optgroup>` : '';
+  const ph = PHOTO_CATS.length ? `<optgroup label="Photo categories">${PHOTO_CATS.map(opt).join('')}</optgroup>` : '';
+  return ph + u + `<optgroup label="Party categories">${PARTY.map(opt).join('')}</optgroup>`
+           + `<optgroup label="More categories">${BUILTIN.filter(c => !PARTY.includes(c)).map(opt).join('')}</optgroup>`;
+}
+function renderSetup(err = ''){
+  const inProgress = S && S.phase !== 'setup' && S.phase !== 'champ';
+  app.innerHTML = `
+  <div class="screen setup">
+    <header class="hero">
+      <h1 class="logo">Square<b>.</b>Off</h1>
+      <p>A party trivia game. Win head-to-head duels, take over your neighbors' squares, and own the whole board.</p>
+    </header>
+    <div class="setup-grid">
+      <section class="card">
+        <h2>Players <span class="pill">${draft.rows.length}</span>${draft.example ? '<span class="pill">Example names</span>' : ''}</h2>
+        <p class="hint">Type in your guests and give each one a category. That's the category they defend when someone challenges them.</p>
+        <div class="plist">
+          ${draft.rows.map((r, i) => `
+          <div class="prow">
+            <span class="swatch" style="background:${COLORS[i % COLORS.length]}"></span>
+            <input id="pn-${i}" data-i="${i}" class="pname" value="${esc(r.name)}" placeholder="Player ${i + 1}" aria-label="Player ${i + 1} name">
+            <select id="pc-${i}" data-i="${i}" class="pcat" aria-label="Player ${i + 1} category">${catOptions(r.cat)}</select>
+            <button class="x" data-del="${i}" aria-label="Remove player ${i + 1}">×</button>
+          </div>`).join('')}
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="addP">Add player</button>
+          <button class="btn ghost" id="mixCats">Deal random categories</button>
+          ${draft.example ? '<button class="btn ghost" id="clearP">Clear example names</button>' : ''}
+        </div>
+      </section>
+      <div class="side">
+        <section class="card">
+          <h2>Clock</h2>
+          <div class="row">
+            <div class="field"><label for="secs">Seconds per player</label>
+              <select id="secs">${[20,30,45,60].map(s => `<option${s == draft.seconds ? ' selected' : ''}>${s}</option>`).join('')}</select></div>
+            <div class="field"><label for="passS">Pass shows answer for</label>
+              <select id="passS">${[2,3,5].map(s => `<option value="${s}"${s == draft.pass ? ' selected' : ''}>${s} seconds</option>`).join('')}</select></div>
+          </div>
+          <label class="check"><input type="checkbox" id="seats"${draft.shuffleSeats ? ' checked' : ''}> Random seats on the board</label>
+        </section>
+        ${editorHTML()}
+        <section class="card rules">
+          <h2>How to play</h2>
+          <ol>
+            <li>Everyone gets a <b>square</b> and a <b>category</b>.</li>
+            <li>A random player <b>challenges a neighbor</b>. The duel is in the <b>defender's category</b>.</li>
+            <li>Each player has a clock. A clue appears and the player on the clock shouts the answer. When they get it right, their clock stops and their opponent's starts.</li>
+            <li><b>Pass</b> reveals the answer for a few seconds while your clock keeps running.</li>
+            <li>Run out of time and you're out. The winner takes all your squares and the category that wasn't played.</li>
+            <li>Last one standing owns the board.</li>
+          </ol>
+        </section>
+      </div>
+    </div>
+    <div class="startbar">
+      <button class="btn gold big" id="start">Start the game</button>
+      ${inProgress ? '<button class="btn big" id="resume">Resume game in progress</button>' : ''}
+      ${err ? `<span class="err">${esc(err)}</span>` : ''}
+    </div>
+  </div>`;
+
+  app.querySelectorAll('.pname').forEach(el => el.addEventListener('input', e => { draft.rows[+e.target.dataset.i].name = e.target.value; draft.example = false; saveDraft(); }));
+  app.querySelectorAll('.pcat').forEach(el => el.addEventListener('change', e => { draft.rows[+e.target.dataset.i].cat = e.target.value; saveDraft(); }));
+  app.querySelectorAll('[data-del]').forEach(el => el.addEventListener('click', () => { draft.rows.splice(+el.dataset.del, 1); saveDraft(); renderSetup(); }));
+  $('#addP').onclick = () => {
+    if (draft.rows.length >= 30) return renderSetup('30 players is the limit.');
+    const used = new Set(draft.rows.map(r => r.cat));
+    const next = allCats().find(c => !used.has(c.id)) || pick(allCats());
+    draft.rows.push({name:'', cat:next.id}); saveDraft(); renderSetup();
+    const last = $(`#pn-${draft.rows.length - 1}`); last && last.focus();
+  };
+  $('#mixCats').onclick = () => {
+    let deck = [];
+    draft.rows.forEach(r => { if (!deck.length) deck = shuffle(allCats().map(c => c.id)); r.cat = deck.pop(); });
+    saveDraft(); renderSetup();
+  };
+  const cl = $('#clearP'); if (cl) cl.onclick = () => { draft.rows.forEach(r => r.name = ''); draft.example = false; saveDraft(); renderSetup(); };
+  $('#secs').onchange = e => { draft.seconds = +e.target.value; saveDraft(); };
+  $('#passS').onchange = e => { draft.pass = +e.target.value; saveDraft(); };
+  $('#seats').onchange = e => { draft.shuffleSeats = e.target.checked; saveDraft(); };
+  bindEditor();
+  $('#start').onclick = startGame;
+  const rs = $('#resume'); if (rs) rs.onclick = () => { S.phase = 'board'; render(); };
+}
+
+/* ================= Custom category editor (text or photos) ================= */
+const idb = (() => {
+  let dbp;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try { const r = indexedDB.open('squareoff', 1); r.onupgradeneeded = () => r.result.createObjectStore('img'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+    catch (e) { rej(e); }
+  }));
+  const run = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const tx = db.transaction('img', mode); const out = fn(tx.objectStore('img')); tx.oncomplete = () => res(out && out.v); tx.onerror = () => rej(tx.error); }); };
+  return {
+    put: (k, v) => run('readwrite', s => { s.put(v, k); }),
+    del: k => run('readwrite', s => { s.delete(k); }),
+    getAll: () => run('readonly', s => { const out = {v:{}}; const req = s.openCursor(); req.onsuccess = () => { const c = req.result; if (c){ out.v[c.key] = c.value; c.continue(); } }; return out; }),
+  };
+})();
+let imgs = {};
+const SHAPES = {states:{}, countries:{}};
+fetch('states.json').then(r => r.json()).then(j => { SHAPES.states = j; }).catch(() => {});
+fetch('countries.json').then(r => r.json()).then(j => { SHAPES.countries = j; }).catch(() => {});
+const newKey = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const blankEd = () => ({id:null, mode:'photo', name:'', prompt:'', text:'', photos:[], busy:'', msg:''});
+let ed = blankEd();
+
+function photoGridHTML(){
+  return ed.photos.map(p => `<div class="ph">
+      <img src="${p.url}" alt="">
+      <button class="x" data-prm="${p.key}" aria-label="Remove photo">×</button>
+      <input id="ph-${p.key}" data-key="${p.key}" class="phA${p.a.trim() ? '' : ' missing'}" value="${esc(p.a)}" placeholder="Answer" aria-label="Answer for this photo">
+    </div>`).join('') + (ed.busy ? `<div class="busy">Adding photo ${ed.busy}…</div>` : '');
+}
+function editorHTML(){
+  const photo = ed.mode === 'photo';
+  return `<section class="card" id="editor">
+    <h2>${ed.id ? 'Edit category' : 'Make your own category'}</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabPhoto" aria-selected="${photo}">Photo clues</button>
+      <button class="tab" role="tab" id="tabText" aria-selected="${!photo}">Text clues</button>
+    </div>
+    <div class="field" style="margin-bottom:10px"><label for="cName">Category name</label><input id="cName" value="${esc(ed.name)}" placeholder="${photo ? 'Baby Pictures' : 'All About the Birthday Star'}"></div>
+    ${photo ? `
+      <div class="field" style="margin-bottom:10px"><label for="cPrompt">Question shown above each photo (optional)</label><input id="cPrompt" value="${esc(ed.prompt)}" placeholder="Who is this?"></div>
+      <label class="drop" id="drop"><input type="file" id="cFiles" accept="image/*" multiple>
+        <strong>Choose photos</strong><span>or drag them here. You can pick lots at once.</span>
+        <span style="font-size:.8rem">Name each file after its answer, like golden-retriever.jpg, and the answer fills in for you.</span></label>
+      <div class="pgrid" id="pgrid">${photoGridHTML()}</div>`
+    : `<p class="hint">One clue per line: <code>clue | answer</code>. Aim for 20 or more.</p>
+      <textarea id="cItems" aria-label="Clues" placeholder="What city was I born in? | Denver&#10;My first pet's name? | Biscuit&#10;Favorite band in high school? | ...">${esc(ed.text)}</textarea>`}
+    <div class="row" style="margin-top:10px">
+      <button class="btn gold" id="cSave">${ed.id ? 'Save changes' : 'Save category'}</button>
+      ${ed.id || ed.photos.length || ed.text ? '<button class="btn ghost" id="cReset">Cancel</button>' : ''}
+      <span id="cMsg" class="hint" style="margin:0">${esc(ed.msg)}</span>
+    </div>
+    ${custom.length ? `<div class="customs">${custom.map(c => `<div class="custom-item"><span>${esc(c.name)} · ${c.items.length} ${c.style === 'photo' ? 'photos' : 'clues'}</span>
+      <div class="row"><button class="btn ghost" data-cedit="${c.id}">Edit</button><button class="x" data-cdel="${c.id}" aria-label="Delete ${esc(c.name)}">×</button></div></div>`).join('')}</div>` : ''}
+  </section>`;
+}
+function setMsg(m){ ed.msg = m; const el = $('#cMsg'); if (el) el.textContent = m; }
+function refreshGrid(){ const g = $('#pgrid'); if (g){ g.innerHTML = photoGridHTML(); bindGrid(); } }
+function bindGrid(){
+  app.querySelectorAll('.phA').forEach(el => el.addEventListener('input', e => {
+    const p = ed.photos.find(x => x.key === e.target.dataset.key); if (p){ p.a = e.target.value; e.target.classList.toggle('missing', !p.a.trim()); }
+  }));
+  app.querySelectorAll('[data-prm]').forEach(el => el.addEventListener('click', () => { ed.photos = ed.photos.filter(p => p.key !== el.dataset.prm); refreshGrid(); }));
+}
+function bindEditor(){
+  $('#tabPhoto').onclick = () => { ed.mode = 'photo'; ed.msg = ''; renderSetup(); };
+  $('#tabText').onclick = () => { ed.mode = 'text'; ed.msg = ''; renderSetup(); };
+  $('#cName').oninput = e => ed.name = e.target.value;
+  const pr = $('#cPrompt'); if (pr) pr.oninput = e => ed.prompt = e.target.value;
+  const tx = $('#cItems'); if (tx) tx.oninput = e => ed.text = e.target.value;
+  const fi = $('#cFiles'); if (fi) fi.onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+  const dz = $('#drop');
+  if (dz){
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addFiles(e.dataTransfer.files); });
+  }
+  bindGrid();
+  $('#cSave').onclick = saveCategory;
+  const rs = $('#cReset'); if (rs) rs.onclick = () => { ed = blankEd(); renderSetup(); };
+  app.querySelectorAll('[data-cedit]').forEach(el => el.addEventListener('click', () => {
+    const c = custom.find(x => x.id === el.dataset.cedit); if (!c) return;
+    const isPhoto = c.style === 'photo';
+    ed = {...blankEd(), id:c.id, mode:isPhoto ? 'photo' : 'text', name:c.name, prompt:c.prompt || '',
+          text: isPhoto ? '' : c.items.map(i => i.join(' | ')).join('\n'),
+          photos: isPhoto ? c.items.map(([q, a]) => ({key:q.slice(4), url:imgs[q.slice(4)] || '', a, isNew:false})).filter(p => p.url) : []};
+    renderSetup(); $('#editor').scrollIntoView({behavior:'smooth', block:'start'});
+  }));
+  app.querySelectorAll('[data-cdel]').forEach(el => el.addEventListener('click', () => {
+    const id = el.dataset.cdel, c = custom.find(x => x.id === id);
+    if (el.dataset.armed !== '1'){ el.dataset.armed = '1'; el.textContent = 'Delete?'; el.style.width = 'auto'; el.style.padding = '0 8px'; setTimeout(() => { if (el.isConnected){ el.dataset.armed = ''; el.textContent = '×'; el.style.width = ''; el.style.padding = ''; } }, 3000); return; }
+    if (c) c.items.forEach(([q]) => { if (q.startsWith('img:')){ const k = q.slice(4); delete imgs[k]; idb.del(k).catch(() => {}); } });
+    custom = custom.filter(x => x.id !== id);
+    draft.rows.forEach(r => { if (r.cat === id) r.cat = BUILTIN[0].id; });
+    if (S) S.players.forEach(p => { if (p.cat === id) p.cat = BUILTIN[0].id; });
+    if (ed.id === id) ed = blankEd();
+    saveCustom(); saveDraft(); if (S) saveGame(); renderSetup();
+  }));
+}
+function guessAnswer(name){
+  let s = name.replace(/\.[^.]+$/, '');
+  if (/^(img|dsc|dscn|pxl|photo|image|screenshot|screen shot|whatsapp)[\s_-]?/i.test(s) || /^[\d\s_-]+$/.test(s)) return '';
+  s = s.replace(/[_-]+/g, ' ').replace(/\s*\(\d+\)$/, '').replace(/\s+\d+$/, '').trim();
+  return s ? s[0].toUpperCase() + s.slice(1) : '';
+}
+async function shrink(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const s = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * s)); c.height = Math.max(1, Math.round(img.naturalHeight * s));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', .82);
+  } finally { URL.revokeObjectURL(url); }
+}
+async function addFiles(list){
+  const files = [...list].filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name));
+  if (!files.length){ setMsg('Those files are not photos.'); return; }
+  let failed = 0;
+  for (let i = 0; i < files.length; i++){
+    ed.busy = `${i + 1} of ${files.length}`; refreshGrid();
+    try { ed.photos.push({key:newKey(), url:await shrink(files[i]), a:guessAnswer(files[i].name), isNew:true}); }
+    catch { failed++; }
+  }
+  ed.busy = ''; refreshGrid();
+  setMsg(failed ? `${failed} photo${failed > 1 ? 's' : ''} couldn't be opened. iPhone HEIC photos may need to be converted to JPEG first.` : `${ed.photos.length} photos ready. Check the answers, then save.`);
+}
+async function saveCategory(){
+  const name = ed.name.trim();
+  if (!name) return setMsg('Give the category a name.');
+  let entry, stored = true;
+  if (ed.mode === 'photo'){
+    if (ed.busy) return setMsg('Wait for the photos to finish adding.');
+    if (ed.photos.length < 3) return setMsg('Add at least 3 photos.');
+    const missing = ed.photos.filter(p => !p.a.trim()).length;
+    if (missing) return setMsg(`${missing} photo${missing > 1 ? 's need' : ' needs'} an answer (outlined in orange).`);
+    for (const p of ed.photos){
+      imgs[p.key] = p.url;
+      if (p.isNew){ try { await idb.put(p.key, p.url); p.isNew = false; } catch { stored = false; } }
+    }
+    entry = {id:ed.id || 'c' + newKey(), name, style:'photo', prompt:ed.prompt.trim(), items:ed.photos.map(p => ['img:' + p.key, p.a.trim()])};
+  } else {
+    const items = P(ed.text);
+    if (items.length < 5) return setMsg('Add at least 5 clues, one per line.');
+    entry = {id:ed.id || 'c' + newKey(), name, style:'auto', items};
+  }
+  const old = custom.find(c => c.id === entry.id);
+  if (old){
+    const keep = new Set(entry.items.map(i => i[0]));
+    old.items.forEach(([q]) => { if (q.startsWith('img:') && !keep.has(q)){ const k = q.slice(4); delete imgs[k]; idb.del(k).catch(() => {}); } });
+    custom = custom.map(c => c.id === entry.id ? entry : c);
+    if (S && S.used) delete S.used[entry.id];
+  } else custom.push(entry);
+  saveCustom();
+  ed = blankEd();
+  ed.msg = stored ? `Saved "${name}". Pick it for a player above.` : `Saved "${name}", but this browser won't keep the photos after you close the tab.`;
+  renderSetup();
+}
+
+function startGame(){
+  const rows = draft.rows.map((r, i) => ({...r, name: r.name.trim() || `Player ${i + 1}`}));
+  if (rows.length < 2) return renderSetup('You need at least 2 players.');
+  const players = rows.map((r, i) => ({id:'p' + i, name:r.name, cat:r.cat, color:COLORS[i % COLORS.length], alive:true}));
+  const order = draft.shuffleSeats ? shuffle(players.map(p => p.id)) : players.map(p => p.id);
+  S = {phase:'board', players, cells:order, cols:Math.ceil(Math.sqrt(order.length)), used:{}, seconds:draft.seconds, pass:draft.pass,
+       challenger:null, lastWinner:null, msg:'', history:[]};
+  saveGame(); requestWake(); render();
+}
+
+/* ================= Board ================= */
+function neighbors(pid){
+  const out = new Set(), n = S.cells.length, cols = S.cols;
+  S.cells.forEach((o, i) => {
+    if (o !== pid) return;
+    const c = i % cols, adj = [i - cols, i + cols];
+    if (c > 0) adj.push(i - 1);
+    if (c < cols - 1) adj.push(i + 1);
+    adj.forEach(j => { if (j >= 0 && j < n && S.cells[j] !== pid) out.add(S.cells[j]); });
+  });
+  return out;
+}
+
+function renderBoard(){
+  const alive = alivePlayers().length;
+  app.innerHTML = `
+  <div class="screen">
+    <header class="bar">
+      <div class="brand"><span class="logo">Square<b>.</b>Off</span><span class="tag">${alive} of ${S.players.length} players left</span></div>
+      <div class="actions">
+        ${S.history.length ? '<button class="btn ghost" id="undo">Undo last duel</button>' : ''}
+        <button class="btn ghost" id="snd">${soundOn ? 'Sound on' : 'Sound off'}</button>
+        <button class="btn ghost" id="fs">Fullscreen</button>
+        <button class="btn ghost" id="setup">Players &amp; settings</button>
+      </div>
+    </header>
+    <div class="callout" id="callout"></div>
+    <div class="board-wrap" id="bw"><div class="board" id="board"></div></div>
+  </div>`;
+  const u = $('#undo'); if (u) u.onclick = undo;
+  $('#snd').onclick = () => { soundOn = !soundOn; store.set('sq_sound', soundOn); renderBoard(); };
+  $('#fs').onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); } catch {} };
+  $('#setup').onclick = () => { renderSetup(); };
+  $('#board').addEventListener('click', onCellClick);
+  paintCallout(); paintBoard(); sizeBoard();
+}
+
+function paintCallout(){
+  const el = $('#callout'); if (!el) return;
+  if (picking){ el.innerHTML = `<div class="msg">Picking a player…</div>`; return; }
+  if (S.challenger){
+    const c = pl(S.challenger);
+    el.innerHTML = `<div class="msg"><em>${esc(c.name)}</em>, pick a neighbor to challenge.</div>
+      <button class="btn ghost" id="cancelC">Choose someone else</button>
+      <div class="sub">Tap a square with a dashed outline. You'll play in that player's category.</div>`;
+    $('#cancelC').onclick = () => { S.challenger = null; saveGame(); paintCallout(); paintBoard(); };
+    return;
+  }
+  const w = S.lastWinner && pl(S.lastWinner);
+  el.innerHTML = `${S.msg ? `<div class="msg">${S.msg}</div>` : ''}
+    <div class="row" style="justify-content:center">
+      <button class="btn gold big" id="rand">Pick a random player</button>
+      ${w && w.alive ? `<button class="btn big" id="again">${esc(w.name)} challenges again</button>` : ''}
+    </div>
+    <div class="sub">Or tap any square to choose who challenges next.</div>`;
+  $('#rand').onclick = randomPick;
+  const a = $('#again'); if (a) a.onclick = () => { S.challenger = w.id; saveGame(); paintCallout(); paintBoard(); };
+}
+
+function paintBoard(){
+  const b = $('#board'); if (!b) return;
+  const cols = S.cols, n = S.cells.length, home = {}, counts = {};
+  S.cells.forEach((o, i) => { if (!(o in home)) home[o] = i; counts[o] = (counts[o] || 0) + 1; });
+  const targets = S.challenger ? neighbors(S.challenger) : null;
+  b.style.gridTemplateColumns = `repeat(${cols}, var(--cs))`;
+  b.innerHTML = S.cells.map((o, i) => {
+    const p = pl(o), c = i % cols, same = j => j >= 0 && j < n && S.cells[j] === o;
+    const bt = same(i - cols), bb = same(i + cols), bl = c > 0 && same(i - 1), br = c < cols - 1 && same(i + 1);
+    const bc = x => x ? p.color : 'var(--bg)';
+    let cls = 'cell';
+    if (flashId) cls += o === flashId ? ' flash' : ' dim';
+    else if (S.challenger){ if (o === S.challenger) cls += ' chal'; else if (targets.has(o)) cls += ' target'; else cls += ' dim'; }
+    const label = home[o] === i ? `<div class="cell-name">${esc(p.name)}</div><div class="cell-cat">${esc(catName(p.cat))}</div>${counts[o] > 1 ? `<span class="cell-n">${counts[o]}</span>` : ''}` : '';
+    return `<div class="${cls}" data-o="${o}" style="background:${p.color};border-color:${bc(bt)} ${bc(br)} ${bc(bb)} ${bc(bl)}" title="${esc(p.name)} · ${esc(catName(p.cat))}">${label}</div>`;
+  }).join('');
+}
+
+function sizeBoard(){
+  const bw = $('#bw'), b = $('#board'); if (!bw || !b || !S) return;
+  const r = bw.getBoundingClientRect(), rows = Math.ceil(S.cells.length / S.cols);
+  const cs = Math.max(40, Math.floor(Math.min(r.width / S.cols, r.height / rows)));
+  b.style.setProperty('--cs', cs + 'px');
+  b.style.gridAutoRows = cs + 'px';
+}
+window.addEventListener('resize', sizeBoard);
+
+function onCellClick(e){
+  const cell = e.target.closest('.cell'); if (!cell || picking) return;
+  const o = cell.dataset.o;
+  if (!S.challenger){ S.challenger = o; saveGame(); paintCallout(); paintBoard(); return; }
+  if (o === S.challenger) return;
+  if (neighbors(S.challenger).has(o)) startDuel(S.challenger, o);
+}
+
+function randomPick(){
+  if (picking) return;
+  const alive = shuffle(alivePlayers());
+  picking = true; paintCallout();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let steps = reduce ? 1 : 16 + rand(alive.length), i = 0, delay = 55;
+  const step = () => {
+    flashId = alive[i % alive.length].id; paintBoard(); sfx.blip();
+    i++; steps--;
+    if (steps > 0){ delay *= 1.12; setTimeout(step, delay); }
+    else setTimeout(() => { S.challenger = flashId; flashId = null; picking = false; saveGame(); sfx.ding(); paintCallout(); paintBoard(); }, reduce ? 0 : 450);
+  };
+  step();
+}
+
+function pushHistory(){
+  const snap = JSON.stringify({...S, history:[]});
+  S.history.push(snap); if (S.history.length > 25) S.history.shift();
+}
+function undo(){
+  if (!S.history.length) return;
+  const h = S.history.slice(0, -1), prev = JSON.parse(S.history[S.history.length - 1]);
+  S = {...prev, history:h, phase:'board', challenger:null, msg:'Last duel undone.'};
+  saveGame(); render();
+}
+
+/* ================= Duel ================= */
+function drawClue(catId){
+  const c = cat(catId);
+  if (c.gen) return c.gen();
+  if (!c.items || !c.items.length) return drawClue(BUILTIN[0].id);
+  const used = S.used[catId] || (S.used[catId] = []);
+  const ok = i => !c.items[i][0].startsWith('img:') || imgs[c.items[i][0].slice(4)];
+  let i;
+  for (let tries = 0; tries <= c.items.length; tries++){
+    if (used.length >= c.items.length) used.length = 0;
+    do { i = rand(c.items.length); } while (used.includes(i));
+    used.push(i);
+    if (ok(i)) break;
+  }
+  return {q:c.items[i][0], a:c.items[i][1], p:c.prompt || ''};
+}
+
+function startDuel(aId, bId){
+  const ms = S.seconds * 1000;
+  D = {a:aId, b:bId, cat:pl(bId).cat, chalCat:pl(aId).cat, time:{[aId]:ms, [bId]:ms}, max:ms,
+       active:null, phase:'pick', clue:null, passUntil:0, last:'', showAns:false, beeped:{}};
+  S.phase = 'duel'; S.challenger = null;
+  render();
+}
+
+function renderDuel(){
+  const a = pl(D.a), b = pl(D.b), c = cat(D.cat);
+  const panel = (p, role, k) => `<div class="pl" id="pl${k}" style="--c:${p.color}">
+      <div class="pl-role">${role}</div><div class="pl-name">${esc(p.name)}</div>
+      <div class="clock" id="clk${k}"></div><div class="tbar"><i id="bar${k}"></i></div></div>`;
+  app.innerHTML = `
+  <div class="screen duel-screen">
+    <div class="duel-head"><span class="eyebrow">Duel category</span><h1 class="duel-cat">${esc(c.name)}</h1></div>
+    <div class="arena">
+      ${panel(a, 'Challenger', 'A')}
+      <div class="stage${c.style === 'photo' || c.style === 'state' ? ' has-photo' : ''}">
+        <div class="turn" id="turn"></div>
+        <div class="prompt" id="prompt"></div>
+        <div class="clue ${c.style || 'text'}" id="clue"></div>
+        <div class="reveal" id="reveal"></div>
+        <div class="last" id="last"></div>
+      </div>
+      ${panel(b, 'Defender', 'B')}
+    </div>
+    <div class="controls">
+      <button class="btn good big" id="bOk">Correct <kbd>Space</kbd></button>
+      <button class="btn warn big" id="bPass">Pass <kbd>P</kbd></button>
+      <button class="btn ghost" id="bSkip">Skip bad clue <kbd>S</kbd></button>
+      <button class="btn ghost" id="bAns">Show answer to host <kbd>A</kbd></button>
+      <button class="btn ghost" id="bPause">Pause <kbd>Esc</kbd></button>
+    </div>
+    <div class="overlay" id="ov" hidden></div>
+  </div>`;
+  $('#bOk').onclick = correct; $('#bPass').onclick = pass; $('#bSkip').onclick = skip;
+  $('#bAns').onclick = toggleAns; $('#bPause').onclick = togglePause;
+  paintDuel(); updateClocks();
+}
+
+const fmt = ms => (Math.max(0, ms) / 1000).toFixed(1);
+function updateClocks(){
+  if (!D) return;
+  ['A','B'].forEach(k => {
+    const id = k === 'A' ? D.a : D.b, t = D.time[id], el = $('#clk' + k), bar = $('#bar' + k);
+    if (!el) return;
+    el.textContent = fmt(t);
+    el.classList.toggle('low', t < 5000 && D.active === id && (D.phase === 'run' || D.phase === 'pass'));
+    bar.style.width = (100 * Math.max(0, t) / D.max) + '%';
+  });
+}
+
+function paintDuel(){
+  if (!D || !$('#clue')) return;
+  $('#plA').classList.toggle('on', D.active === D.a);
+  $('#plB').classList.toggle('on', D.active === D.b);
+  const live = D.phase === 'run' || D.phase === 'pass';
+  $('#turn').innerHTML = live && D.active ? `<span style="color:${pl(D.active).color};filter:brightness(1.4)">${esc(pl(D.active).name)}</span> is on the clock` : '';
+  $('#prompt').textContent = live && D.clue ? (D.clue.p || '') : '';
+  const clue = $('#clue');
+  const cs = cat(D.cat).style || 'text', SH = SHAPES[cat(D.cat).shapes || 'states'] || {}, noLabel = cat(D.cat).shapes === 'countries';
+  clue.className = 'clue ' + (cs === 'auto' ? (D.clue && /[A-Za-z0-9]/.test(D.clue.q) ? 'text' : 'emoji') : cs === 'state' && !(D.clue && SH[D.clue.q]) ? 'text' : cs);
+  if (live && D.clue && cs === 'state' && noLabel && !SH[D.clue.q]){
+    clue.textContent = 'Map still loading. Press Skip.'; clue.dataset.q = '';
+  } else if (live && D.clue && cs === 'state' && SH[D.clue.q]){
+    if (clue.dataset.q !== D.clue.q){ const st = SH[D.clue.q]; clue.innerHTML = `<svg viewBox="${st.vb}" aria-hidden="true"><path d="${st.d}" fill-rule="evenodd"/></svg>${noLabel ? '' : `<div class="state-name">${esc(D.clue.q)}</div>`}`; }
+    clue.dataset.q = D.clue.q;
+  } else if (live && D.clue && cs === 'photo'){
+    const qq = String(D.clue.q), bank = qq.startsWith('pb:'), u = bank ? pbUrl(qq) : imgs[qq.slice(4)];
+    if (clue.dataset.q !== D.clue.q) clue.innerHTML = u ? `<img src="${u}" alt="">` : `<div class="missing-ph">${bank ? 'Loading photos…' : 'Photo missing. Press Skip.'}</div>`;
+    clue.dataset.q = u ? D.clue.q : '';
+  } else { clue.textContent = live && D.clue ? D.clue.q : ''; clue.dataset.q = ''; }
+  clue.classList.toggle('passing', D.phase === 'pass');
+  const rv = $('#reveal');
+  if (D.phase === 'pass'){ rv.className = 'reveal'; rv.textContent = D.clue.a || '(no answer)'; }
+  else if (D.showAns && live && D.clue){ rv.className = 'reveal host'; rv.textContent = 'Answer: ' + (D.clue.a || '—'); }
+  else { rv.className = 'reveal'; rv.textContent = ''; }
+  $('#last').innerHTML = D.last ? `Last answer: <b>${esc(D.last)}</b>` : '';
+  $('#bOk').disabled = D.phase !== 'run';
+  $('#bPass').disabled = D.phase !== 'run';
+  $('#bSkip').disabled = D.phase !== 'run';
+  $('#bAns').textContent = '';
+  $('#bAns').insertAdjacentHTML('beforeend', `${D.showAns ? 'Hide answer' : 'Show answer to host'} <kbd>A</kbd>`);
+  $('#bPause').innerHTML = `${D.phase === 'paused' ? 'Resume' : 'Pause'} <kbd>Esc</kbd>`;
+  paintOverlay();
+}
+
+function paintOverlay(){
+  const ov = $('#ov'), a = pl(D.a), b = pl(D.b);
+  const whoBtn = (p, id) => `<button class="btn big who" id="${id}" style="background:${p.color}">${esc(p.name)}</button>`;
+  if (D.phase === 'pick'){
+    ov.hidden = false;
+    ov.innerHTML = `<span class="eyebrow">${esc(a.name)} vs ${esc(b.name)} · ${esc(catName(D.cat))}</span>
+      <h2>Who goes first?</h2>
+      <div class="row" style="justify-content:center">${whoBtn(a, 'firstA')}${whoBtn(b, 'firstB')}</div>
+      <button class="btn ghost" id="cancelD">Cancel duel</button>`;
+    $('#firstA').onclick = () => countdown(D.a);
+    $('#firstB').onclick = () => countdown(D.b);
+    $('#cancelD').onclick = cancelDuel;
+  } else if (D.phase === 'count'){
+    ov.hidden = false;
+    ov.innerHTML = `<p>${esc(pl(D.active).name)} starts</p><div class="cd" id="cd">${D.cd}</div>`;
+  } else if (D.phase === 'paused'){
+    ov.hidden = false;
+    ov.innerHTML = `<h2>Paused</h2>
+      <button class="btn gold big" id="resumeD">Resume <kbd>Esc</kbd></button>
+      <p>Need to fix something? End the duel by hand:</p>
+      <div class="row" style="justify-content:center">
+        <button class="btn" id="winA">${esc(a.name)} wins</button>
+        <button class="btn" id="winB">${esc(b.name)} wins</button>
+        <button class="btn ghost" id="cancelD">Cancel duel, no change</button>
+      </div>`;
+    $('#resumeD').onclick = togglePause;
+    $('#winA').onclick = () => endDuel(D.a);
+    $('#winB').onclick = () => endDuel(D.b);
+    $('#cancelD').onclick = cancelDuel;
+  } else if (D.phase === 'done'){
+    const w = pl(D.winner), l = pl(D.winner === D.a ? D.b : D.a);
+    ov.hidden = false;
+    ov.innerHTML = `<span class="eyebrow">Time's up for ${esc(l.name)}</span>
+      <h2><span style="color:${w.color};filter:brightness(1.4)">${esc(w.name)}</span> wins the duel</h2>
+      <p>${esc(l.name)} is out. ${esc(w.name)} takes their squares.</p>
+      <button class="btn gold big" id="backB">Back to the board <kbd>Enter</kbd></button>`;
+    $('#backB').onclick = finishDuel;
+    $('#backB').focus();
+  } else { ov.hidden = true; ov.innerHTML = ''; }
+}
+
+function countdown(first){
+  D.active = first; D.phase = 'count'; D.cd = 3; paintDuel(); sfx.blip();
+  const t = setInterval(() => {
+    if (!D || D.phase !== 'count'){ clearInterval(t); return; }
+    D.cd--;
+    if (D.cd > 0){ const el = $('#cd'); if (el) el.textContent = D.cd; sfx.blip(); }
+    else { clearInterval(t); sfx.go(); D.phase = 'run'; D.clue = drawClue(D.cat); paintDuel(); }
+  }, 750);
+}
+
+function correct(){
+  if (!D || D.phase !== 'run') return;
+  sfx.ding(); D.last = D.clue.a || D.clue.q;
+  D.active = D.active === D.a ? D.b : D.a;
+  D.clue = drawClue(D.cat); paintDuel();
+}
+function pass(){
+  if (!D || D.phase !== 'run') return;
+  sfx.pass(); D.phase = 'pass'; D.passUntil = performance.now() + S.pass * 1000; paintDuel();
+}
+function skip(){
+  if (!D || D.phase !== 'run') return;
+  D.clue = drawClue(D.cat); paintDuel();
+}
+function toggleAns(){ if (!D) return; D.showAns = !D.showAns; paintDuel(); }
+function togglePause(){
+  if (!D) return;
+  if (D.phase === 'run' || D.phase === 'pass'){ D.prev = D.phase; D.pausedAt = performance.now(); D.phase = 'paused'; }
+  else if (D.phase === 'paused'){ D.phase = D.prev; if (D.prev === 'pass') D.passUntil += performance.now() - D.pausedAt; }
+  else return;
+  paintDuel(); updateClocks();
+}
+function endDuel(winner){
+  D.winner = winner; D.phase = 'done'; D.active = null;
+  sfx.buzz(); saveGame(); paintDuel(); updateClocks();
+}
+function cancelDuel(){ D = null; S.phase = 'board'; saveGame(); render(); }
+
+function finishDuel(){
+  if (!D || D.phase !== 'done') return;
+  const w = pl(D.winner), l = pl(D.winner === D.a ? D.b : D.a), wasChallenger = D.winner === D.a;
+  pushHistory();
+  S.cells = S.cells.map(o => o === l.id ? w.id : o);
+  l.alive = false;
+  w.cat = D.chalCat; // the category that wasn't played stays in the game
+  S.lastWinner = w.id;
+  S.msg = wasChallenger
+    ? `<em>${esc(w.name)}</em> knocked out ${esc(l.name)} and still defends <em>${esc(catName(w.cat))}</em>.`
+    : `<em>${esc(w.name)}</em> held off ${esc(l.name)} and now defends <em>${esc(catName(w.cat))}</em>.`;
+  D = null;
+  S.phase = alivePlayers().length === 1 ? 'champ' : 'board';
+  saveGame(); render();
+}
+
+let lastT = 0;
+function tick(t){
+  requestAnimationFrame(tick);
+  const dt = lastT ? Math.min(t - lastT, 250) : 0; lastT = t;
+  if (!D || !(D.phase === 'run' || D.phase === 'pass')) return;
+  const id = D.active;
+  D.time[id] -= dt;
+  const sec = Math.ceil(D.time[id] / 1000);
+  if (sec <= 5 && sec > 0 && D.beeped[id] !== sec){ D.beeped[id] = sec; sfx.tick(); }
+  if (D.time[id] <= 0){ D.time[id] = 0; endDuel(id === D.a ? D.b : D.a); return; }
+  if (D.phase === 'pass' && t >= D.passUntil){ D.phase = 'run'; D.last = ''; D.clue = drawClue(D.cat); paintDuel(); }
+  updateClocks();
+}
+requestAnimationFrame(tick);
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select')) return;
+  if (!D) return;
+  const k = e.key.toLowerCase();
+  if (D.phase === 'done' && k === 'enter'){ e.preventDefault(); finishDuel(); return; }
+  if (k === ' ' || k === 'enter' || k === 'arrowright'){ e.preventDefault(); correct(); }
+  else if (k === 'p'){ pass(); }
+  else if (k === 's'){ skip(); }
+  else if (k === 'a'){ toggleAns(); }
+  else if (k === 'escape'){ togglePause(); }
+});
+
+/* ================= Champion ================= */
+function renderChamp(){
+  const w = alivePlayers()[0];
+  app.innerHTML = `
+  <div class="screen champ" style="--c:${w.color}">
+    <canvas id="conf"></canvas>
+    <div class="champ-inner">
+      <span class="eyebrow">Owns the whole board</span>
+      <h1>${esc(w.name)}</h1>
+      <p>is the Square Off champion</p>
+      <div class="row" style="justify-content:center;margin-top:10px">
+        <button class="btn gold big" id="again">Play again, same players</button>
+        <button class="btn" id="change">Change players</button>
+        ${S.history.length ? '<button class="btn ghost" id="undo">Undo last duel</button>' : ''}
+      </div>
+    </div>
+  </div>`;
+  $('#again').onclick = startGame;
+  $('#change').onclick = () => { S.phase = 'setup'; saveGame(); render(); };
+  const u = $('#undo'); if (u) u.onclick = undo;
+  sfx.fanfare(); confetti();
+}
+function confetti(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cv = $('#conf'); if (!cv) return;
+  const ctx = cv.getContext('2d'), dpr = devicePixelRatio || 1;
+  const W = cv.width = cv.clientWidth * dpr, H = cv.height = cv.clientHeight * dpr;
+  const parts = Array.from({length:220}, () => ({x:Math.random() * W, y:-Math.random() * H, vx:(Math.random() - .5) * 2 * dpr, vy:(2 + Math.random() * 3) * dpr, s:(5 + Math.random() * 7) * dpr, r:Math.random() * 6, vr:(Math.random() - .5) * .3, c:pick([...COLORS.slice(0, 10), '#ffc94d', '#ffffff'])}));
+  const end = performance.now() + 7000;
+  (function frame(now){
+    if (!document.body.contains(cv)) return;
+    ctx.clearRect(0, 0, W, H);
+    parts.forEach(p => { p.x += p.vx; p.y += p.vy; p.r += p.vr; if (p.y > H && now < end) { p.y = -20; p.x = Math.random() * W; }
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+    if (parts.some(p => p.y < H)) requestAnimationFrame(frame);
+  })(performance.now());
+}
+
+/* ================= Wake lock & boot ================= */
+async function requestWake(){ try { await navigator.wakeLock?.request('screen'); } catch {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S && S.phase !== 'setup') requestWake(); });
+if (S && S.phase === 'duel') S.phase = 'board';
+(async () => {
+  try { imgs = await Promise.race([idb.getAll(), new Promise((_, rej) => setTimeout(rej, 2500))]) || {}; } catch {}
+  render();
+})();
+</script>
+
+</body>
+</html>
