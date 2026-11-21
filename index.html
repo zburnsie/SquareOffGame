@@ -20,7 +20,7 @@ img{max-width:100%}
   color-scheme: dark;
   --bg:#130f1f; --bg2:#1b1630; --panel:#231d39; --line:#3a3159;
   --fg:#f5f0fb; --muted:#a69cc2;
-  --gold:#ffc94d; --good:#33d18f; --warn:#ff9f43; --bad:#ff5d6c;
+  --gold:#ffc94d; --sea:#12223a; --land:#4b4470; --good:#33d18f; --warn:#ff9f43; --bad:#ff5d6c;
   --display:"Bricolage Grotesque","Arial Black",system-ui,sans-serif;
   --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
@@ -179,6 +179,11 @@ textarea{min-height:120px; resize:vertical; font-family:var(--mono); font-size:.
 .clue.state path{fill:var(--gold); stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; stroke-linejoin:round; filter:drop-shadow(0 6px 18px rgba(0,0,0,.45))}
 .clue.state .state-name{font-family:var(--display); font-weight:800; font-size:clamp(30px, 6.5vmin, 76px); line-height:1}
 .clue.state.passing{opacity:.35}
+.clue.world{flex:1; min-height:0; width:100%; position:relative}
+.clue.world svg{position:absolute; inset:0; width:100%; height:100%; background:var(--sea); border-radius:14px}
+.clue.world path{fill:var(--land); stroke:var(--bg2); stroke-width:1; vector-effect:non-scaling-stroke}
+.clue.world path.hit{fill:var(--gold); stroke:#fff; stroke-width:2}
+.clue.world.passing{opacity:.35}
 @media (prefers-reduced-motion:reduce){ .clock.low{animation:none} *{transition:none!important} }
 </style>
 </head>
@@ -607,7 +612,7 @@ Your armpits after a workout|B.O.
 Big metal bin behind a restaurant|Dumpster
 The gym bag you forgot in the car|Gym clothes
 Under the street, where the drains go|Sewer`)},
- {id:'geography', name:'Geography', style:'state', shapes:'countries', prompt:'Name the country', items:[["Afghanistan", "Afghanistan"], ["Argentina", "Argentina"], ["Australia", "Australia"], ["Austria", "Austria"], ["Brazil", "Brazil"], ["Canada", "Canada"], ["Chile", "Chile"], ["China", "China"], ["Colombia", "Colombia"], ["Croatia", "Croatia"], ["Cuba", "Cuba"], ["Cyprus", "Cyprus"], ["Denmark", "Denmark"], ["Dominican Republic", "Dominican Republic"], ["Ecuador", "Ecuador"], ["Egypt", "Egypt"], ["Ethiopia", "Ethiopia"], ["Finland", "Finland"], ["France", "France"], ["Germany", "Germany"], ["Greece", "Greece"], ["Haiti", "Haiti"], ["Iceland", "Iceland"], ["India", "India"], ["Indonesia", "Indonesia"], ["Iran", "Iran"], ["Ireland", "Ireland"], ["Israel", "Israel"], ["Italy", "Italy"], ["Jamaica", "Jamaica"], ["Japan", "Japan"], ["Kenya", "Kenya"], ["Madagascar", "Madagascar"], ["Malaysia", "Malaysia"], ["Mexico", "Mexico"], ["Mongolia", "Mongolia"], ["Morocco", "Morocco"], ["Nepal", "Nepal"], ["Netherlands", "Netherlands"], ["New Zealand", "New Zealand"], ["Nigeria", "Nigeria"], ["North Korea", "North Korea"], ["Norway", "Norway"], ["Pakistan", "Pakistan"], ["Panama", "Panama"], ["Peru", "Peru"], ["Philippines", "Philippines"], ["Poland", "Poland"], ["Portugal", "Portugal"], ["Russia", "Russia"], ["Saudi Arabia", "Saudi Arabia"], ["Somalia", "Somalia"], ["South Africa", "South Africa"], ["South Korea", "South Korea"], ["Spain", "Spain"], ["Sri Lanka", "Sri Lanka"], ["Sweden", "Sweden"], ["Switzerland", "Switzerland"], ["Taiwan", "Taiwan"], ["Thailand", "Thailand"], ["Turkey", "Turkey"], ["Ukraine", "Ukraine"], ["United Kingdom", "United Kingdom"], ["Venezuela", "Venezuela"], ["Vietnam", "Vietnam"]]},
+ {id:'geography', name:'Geography', style:'world', prompt:'Name the gold country', items:[["Afghanistan", "Afghanistan"], ["Argentina", "Argentina"], ["Australia", "Australia"], ["Austria", "Austria"], ["Brazil", "Brazil"], ["Canada", "Canada"], ["Chile", "Chile"], ["China", "China"], ["Colombia", "Colombia"], ["Croatia", "Croatia"], ["Cuba", "Cuba"], ["Cyprus", "Cyprus"], ["Denmark", "Denmark"], ["Dominican Republic", "Dominican Republic"], ["Ecuador", "Ecuador"], ["Egypt", "Egypt"], ["Ethiopia", "Ethiopia"], ["Finland", "Finland"], ["France", "France"], ["Germany", "Germany"], ["Greece", "Greece"], ["Haiti", "Haiti"], ["Iceland", "Iceland"], ["India", "India"], ["Indonesia", "Indonesia"], ["Iran", "Iran"], ["Ireland", "Ireland"], ["Israel", "Israel"], ["Italy", "Italy"], ["Jamaica", "Jamaica"], ["Japan", "Japan"], ["Kenya", "Kenya"], ["Madagascar", "Madagascar"], ["Malaysia", "Malaysia"], ["Mexico", "Mexico"], ["Mongolia", "Mongolia"], ["Morocco", "Morocco"], ["Nepal", "Nepal"], ["Netherlands", "Netherlands"], ["New Zealand", "New Zealand"], ["Nigeria", "Nigeria"], ["North Korea", "North Korea"], ["Norway", "Norway"], ["Pakistan", "Pakistan"], ["Panama", "Panama"], ["Peru", "Peru"], ["Philippines", "Philippines"], ["Poland", "Poland"], ["Portugal", "Portugal"], ["Russia", "Russia"], ["Saudi Arabia", "Saudi Arabia"], ["Somalia", "Somalia"], ["South Africa", "South Africa"], ["South Korea", "South Korea"], ["Spain", "Spain"], ["Sri Lanka", "Sri Lanka"], ["Sweden", "Sweden"], ["Switzerland", "Switzerland"], ["Taiwan", "Taiwan"], ["Thailand", "Thailand"], ["Turkey", "Turkey"], ["Ukraine", "Ukraine"], ["United Kingdom", "United Kingdom"], ["Venezuela", "Venezuela"], ["Vietnam", "Vietnam"]]},
 ];
 const BUILTIN = [
  ...PARTY,
@@ -1186,7 +1191,24 @@ const idb = (() => {
 let imgs = {};
 const SHAPES = {states:{}, countries:{}};
 fetch('states.json').then(r => r.json()).then(j => { SHAPES.states = j; }).catch(() => {});
-fetch('countries.json').then(r => r.json()).then(j => { SHAPES.countries = j; }).catch(() => {});
+fetch('world.json').then(r => r.json()).then(j => { SHAPES.world = j; }).catch(() => {});
+function worldSVG(name){
+  const W = SHAPES.world, t = W && W.t[name];
+  if (!t) return '';
+  const k = Math.cos(t.lat * Math.PI / 180);
+  const x0 = t.b[0] * k, x1 = t.b[2] * k, y0 = t.b[1], y1 = t.b[3];
+  const w = x1 - x0, h = y1 - y0, half = Math.max(w, h) / 2 + 0.7 * Math.max(w, h, 6);
+  const hw = half * 4 / 3, vx = (x0 + x1) / 2 - hw, vy = (y0 + y1) / 2 - half, vw = 2 * hw, vh = 2 * half;
+  let paths = '';
+  for (const [n, c] of Object.entries(W.c)){
+    if (n === t.k) continue;
+    const b = c.b;
+    if (b[2] * k < vx - vw / 3 || b[0] * k > vx + vw * 4 / 3 || b[3] < vy - vh / 3 || b[1] > vy + vh * 4 / 3) continue;
+    paths += `<path d="${c.d}"/>`;
+  }
+  paths += `<path class="hit" d="${W.c[t.k].d}"/>`;
+  return `<svg viewBox="${vx} ${vy} ${vw} ${vh}" aria-hidden="true"><g transform="scale(${k} 1)">${paths}</g></svg>`;
+}
 const newKey = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const blankEd = () => ({id:null, mode:'photo', name:'', prompt:'', text:'', photos:[], busy:'', msg:''});
 let ed = blankEd();
@@ -1493,7 +1515,7 @@ function renderDuel(){
     <div class="duel-head"><span class="eyebrow">Duel category</span><h1 class="duel-cat">${esc(c.name)}</h1></div>
     <div class="arena">
       ${panel(a, 'Challenger', 'A')}
-      <div class="stage${c.style === 'photo' || c.style === 'state' ? ' has-photo' : ''}">
+      <div class="stage${['photo', 'state', 'world'].includes(c.style) ? ' has-photo' : ''}">
         <div class="turn" id="turn"></div>
         <div class="prompt" id="prompt"></div>
         <div class="clue ${c.style || 'text'}" id="clue"></div>
@@ -1538,7 +1560,9 @@ function paintDuel(){
   const clue = $('#clue');
   const cs = cat(D.cat).style || 'text', SH = SHAPES[cat(D.cat).shapes || 'states'] || {}, noLabel = cat(D.cat).shapes === 'countries';
   clue.className = 'clue ' + (cs === 'auto' ? (D.clue && /[A-Za-z0-9]/.test(D.clue.q) ? 'text' : 'emoji') : cs === 'state' && !(D.clue && SH[D.clue.q]) ? 'text' : cs);
-  if (live && D.clue && cs === 'state' && noLabel && !SH[D.clue.q]){
+  if (live && D.clue && cs === 'world'){
+    if (clue.dataset.q !== D.clue.q){ const svg = worldSVG(D.clue.q); clue.innerHTML = svg || '<div class="missing-ph">Map still loading. Press Skip.</div>'; clue.dataset.q = svg ? D.clue.q : ''; }
+  } else if (live && D.clue && cs === 'state' && noLabel && !SH[D.clue.q]){
     clue.textContent = 'Map still loading. Press Skip.'; clue.dataset.q = '';
   } else if (live && D.clue && cs === 'state' && SH[D.clue.q]){
     if (clue.dataset.q !== D.clue.q){ const st = SH[D.clue.q]; clue.innerHTML = `<svg viewBox="${st.vb}" aria-hidden="true"><path d="${st.d}" fill-rule="evenodd"/></svg>${noLabel ? '' : `<div class="state-name">${esc(D.clue.q)}</div>`}`; }

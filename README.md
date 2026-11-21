@@ -12,7 +12,7 @@ Locally: `python3 -m http.server` in this folder, then open http://localhost:800
 
 - `index.html` — the whole game (setup, board, duels, scoring).
 - `photos/index.json` — the photo categories and their answers; `photos/ph-*.json` — each category's photos as data URIs.
-- `states.json`, `countries.json` — outlines for State Capitals and Geography.
+- `states.json` — outlines for State Capitals; `world.json` — world map for Geography (target country highlighted among its neighbors).
 - `tools/` — scripts used to download, merge and pack photos (`pack_photos.py` rebuilds `photos/` from a folder of `Category/Answer.jpg` files).
 
 Host controls during a duel: **Space** correct, **P** pass, **S** skip clue, **A** show answer to host, **Esc** pause.
