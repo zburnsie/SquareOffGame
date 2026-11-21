@@ -250,19 +250,15 @@ textarea{min-height:120px; resize:vertical; font-family:var(--mono); font-size:.
 body{
   background-color:var(--bg);
   background-image:
-    radial-gradient(1px 1px at 20px 30px, #ffffffcc, transparent),
-    radial-gradient(1px 1px at 120px 80px, #ffffff99, transparent),
-    radial-gradient(2px 2px at 200px 150px, #9fe8ffcc, transparent),
-    radial-gradient(1px 1px at 300px 40px, #ffffff88, transparent),
-    radial-gradient(2px 2px at 80px 220px, #ffb3f7aa, transparent),
-    radial-gradient(1px 1px at 260px 260px, #ffffffaa, transparent),
-    radial-gradient(1px 1px at 170px 290px, #fff7b3aa, transparent);
-  background-size:340px 320px;
+    radial-gradient(1.5px 1.5px at 40px 60px, #ffffff70, transparent),
+    radial-gradient(2px 2px at 260px 180px, #9fe8ff60, transparent),
+    radial-gradient(1.5px 1.5px at 420px 320px, #ffffff55, transparent),
+    radial-gradient(2px 2px at 150px 430px, #ffb3f750, transparent);
+  background-size:520px 520px;
   font-size:17px;
   animation:starfield 70s linear infinite;
 }
-@keyframes starfield{to{background-position:0 320px}}
-body::after{content:""; position:fixed; inset:0; pointer-events:none; z-index:50; background:repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,.16) 2px 3px)}
+@keyframes starfield{to{background-position:0 520px}}
 .btn{border-radius:0; font-family:var(--display); font-size:.66rem; text-transform:uppercase; letter-spacing:.03em; padding:12px 14px; border:2px solid var(--line); box-shadow:4px 4px 0 #000; background:var(--panel); line-height:1.4}
 .btn:hover{border-color:var(--cyan); color:var(--cyan)}
 .btn:active{transform:translate(2px,2px); box-shadow:2px 2px 0 #000}
