@@ -13,7 +13,7 @@ img{max-width:100%}
 <title>Square Off</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: one-screen game-show stage. Setup sheet, then the square board, then a two-clock duel arena. */
 :root{
@@ -184,12 +184,175 @@ textarea{min-height:120px; resize:vertical; font-family:var(--mono); font-size:.
 .clue.world path{fill:var(--land); stroke:var(--bg2); stroke-width:1; vector-effect:non-scaling-stroke}
 .clue.world path.hit{fill:var(--gold); stroke:#fff; stroke-width:2}
 .clue.world.passing{opacity:.35}
+/* ---------- Phone remote ---------- */
+.modal{position:fixed; inset:0; z-index:20; background:color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter:blur(6px); display:grid; place-items:center; padding:24px}
+.modal-card{background:var(--bg2); border:1px solid var(--line); border-radius:18px; padding:24px; max-width:420px; width:100%; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center}
+.modal-card h2{font-family:var(--display); font-weight:800; margin:0; font-size:1.6rem; text-wrap:balance}
+.qr{background:#fff; padding:10px; border-radius:12px; line-height:0}
+.qr svg{width:220px; height:220px}
+.code{font-family:var(--mono); font-size:1.8rem; font-weight:700; letter-spacing:.2em; color:var(--gold)}
+.url{font-family:var(--mono); font-size:.78rem; color:var(--muted); word-break:break-all}
+.dot{display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--muted); margin-right:6px}
+.dot.on{background:var(--good)}
+.btn.on-remote{border-color:var(--good); color:var(--good)}
+.remote{height:100%; display:flex; flex-direction:column; gap:10px; padding-left:max(14px, env(safe-area-inset-left, 0px)); padding-right:max(14px, env(safe-area-inset-right, 0px)); padding-block:10px; overflow:hidden}
+.r-head{display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:.85rem; color:var(--muted)}
+.r-head .logo{font-size:1.15rem; color:var(--fg)}
+.r-main{flex:1; min-height:0; display:flex; flex-direction:column; gap:10px; overflow-y:auto}
+.r-msg{font-size:1.1rem; font-weight:600; text-align:center; text-wrap:balance}
+.r-msg em{font-style:normal; color:var(--gold)}
+.r-sub{color:var(--muted); font-size:.85rem; text-align:center}
+.r-btn{width:100%; border-radius:14px; padding:16px; font-weight:700; font-size:1.1rem; color:var(--fg); background:var(--panel); border:1px solid var(--line); touch-action:manipulation}
+.r-btn:active{transform:scale(.98)}
+.r-btn.gold{background:var(--gold); color:#2a1d00; border-color:var(--gold)}
+.r-btn.good{background:var(--good); color:#062417; border-color:var(--good); font-size:1.6rem; padding:24px}
+.r-btn.warn{background:transparent; color:var(--warn); border:2px solid var(--warn)}
+.r-btn.who{color:#fff; border:0; font-size:1.3rem; padding:20px}
+.r-chips{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px}
+.r-chip{border:0; border-radius:12px; padding:12px 10px; color:#fff; font-weight:700; font-size:1rem; text-align:left; text-shadow:0 1px 2px rgba(0,0,0,.4); display:flex; flex-direction:column; gap:2px; min-width:0; touch-action:manipulation}
+.r-chip small{font-weight:500; opacity:.92; font-size:.75rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.r-chip.flash{outline:3px solid #fff}
+.r-label{font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700; text-align:center}
+.r-players{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.r-pl{border:2px solid var(--line); border-radius:12px; padding:8px 10px; opacity:.55; min-width:0; text-align:center}
+.r-pl.on{opacity:1; border-color:var(--c); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent)}
+.r-pl b{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.r-clk{font-family:var(--mono); font-weight:700; font-size:2rem; font-variant-numeric:tabular-nums; line-height:1.1}
+.r-clk.low{color:var(--bad)}
+.r-card{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; flex:1; min-height:170px}
+.r-clue{flex:1; min-height:110px; width:100%; position:relative}
+.r-clue img{position:absolute; inset:0; margin:auto; max-width:100%; max-height:100%; object-fit:contain; border-radius:8px}
+.r-clue svg{position:absolute; inset:0; width:100%; height:100%; border-radius:8px}
+.r-clue.world svg{background:var(--sea)}
+.r-clue path{fill:var(--land); stroke:var(--bg2); stroke-width:1; vector-effect:non-scaling-stroke}
+.r-clue path.hit, .r-clue.state path{fill:var(--gold)}
+.r-txt{position:absolute; inset:0; display:grid; place-items:center; font-family:var(--display); font-weight:800; font-size:1.7rem; line-height:1.1; overflow-wrap:anywhere; padding:4px}
+.r-txt.emoji, .r-txt.count{font-family:var(--emoji); font-size:2.6rem}
+.r-txt.count{font-size:1.5rem; letter-spacing:.1em}
+.r-ans{font-family:var(--display); font-weight:800; font-size:clamp(1.7rem, 9vw, 2.6rem); color:var(--gold); line-height:1.05; text-wrap:balance}
+.r-actions{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding-bottom:env(safe-area-inset-bottom, 0px)}
+.r-actions .good{grid-column:1 / -1}
+.r-actions .r-btn{padding:14px 8px; font-size:1rem}
+.r-actions .r-btn.good{font-size:1.6rem; padding:24px}
+.r-cd{font-family:var(--display); font-weight:800; font-size:7rem; color:var(--gold); text-align:center; line-height:1}
 @media (prefers-reduced-motion:reduce){ .clock.low{animation:none} *{transition:none!important} }
+/* ---------- Retro arcade theme (Tetris / Galaga) ---------- */
+:root{
+  --bg:#05050f; --bg2:#0c0c22; --panel:#15153c; --line:#2e2e74;
+  --fg:#f2f2ff; --muted:#9090cc;
+  --gold:#ffd400; --good:#2bff88; --warn:#ff8a00; --bad:#ff3355;
+  --cyan:#00e5ff; --pink:#ff3df2;
+  --sea:#06122a; --land:#2b2b68;
+  --display:"Press Start 2P","Courier New",monospace;
+  --body:"Pixelify Sans","Trebuchet MS",system-ui,sans-serif;
+  --mono:"Press Start 2P","Courier New",monospace;
+}
+body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, #ffffffcc, transparent),
+    radial-gradient(1px 1px at 120px 80px, #ffffff99, transparent),
+    radial-gradient(2px 2px at 200px 150px, #9fe8ffcc, transparent),
+    radial-gradient(1px 1px at 300px 40px, #ffffff88, transparent),
+    radial-gradient(2px 2px at 80px 220px, #ffb3f7aa, transparent),
+    radial-gradient(1px 1px at 260px 260px, #ffffffaa, transparent),
+    radial-gradient(1px 1px at 170px 290px, #fff7b3aa, transparent);
+  background-size:340px 320px;
+  font-size:17px;
+  animation:starfield 70s linear infinite;
+}
+@keyframes starfield{to{background-position:0 320px}}
+body::after{content:""; position:fixed; inset:0; pointer-events:none; z-index:50; background:repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,.16) 2px 3px)}
+.btn{border-radius:0; font-family:var(--display); font-size:.66rem; text-transform:uppercase; letter-spacing:.03em; padding:12px 14px; border:2px solid var(--line); box-shadow:4px 4px 0 #000; background:var(--panel); line-height:1.4}
+.btn:hover{border-color:var(--cyan); color:var(--cyan)}
+.btn:active{transform:translate(2px,2px); box-shadow:2px 2px 0 #000}
+.btn.big{font-size:.82rem; padding:16px 22px; border-radius:0}
+.btn.gold{background:var(--gold); color:#1a1400; border-color:#fff3a0}
+.btn.gold:hover{color:#1a1400; border-color:#fff}
+.btn.good{border-color:#b8ffd6}
+.btn.good:hover{color:#062417; border-color:#fff}
+.btn.warn:hover{color:var(--warn); border-color:#ffc27a}
+.btn.ghost{background:var(--bg2)}
+.actions .btn{font-size:.58rem; padding:9px 11px}
+kbd{font-family:var(--body); font-size:.95em; border-radius:0}
+input,select,textarea{border-radius:0; border:2px solid var(--line); font-size:1.05rem; background:#07071a}
+input,select,textarea{box-sizing:border-box; max-width:100%}
+#rStat{min-width:0; text-align:right; font-size:.8rem; line-height:1.3}
+.r-head{align-items:flex-start}
+textarea{font-family:var(--body)}
+.card{border-radius:0; border:2px solid var(--line); box-shadow:6px 6px 0 #000; background:var(--bg2)}
+.card h2{font-size:.8rem; text-transform:uppercase; color:var(--cyan); line-height:1.5}
+.card .hint, .hint{font-size:1rem}
+.pill{border-radius:0; font-family:var(--display); font-size:.5rem; padding:4px 7px; color:var(--gold); border-color:var(--gold)}
+.eyebrow, .pl-role, .r-label{font-family:var(--display); font-size:.55rem; letter-spacing:.06em; color:var(--pink); line-height:1.6}
+.logo{font-family:var(--display); text-transform:uppercase; color:var(--gold); text-shadow:3px 3px 0 var(--pink), 6px 6px 0 #000; letter-spacing:0}
+.logo b{color:var(--cyan)}
+.hero .logo{font-size:clamp(1.6rem, 6vw, 3.2rem); line-height:1.25}
+.hero p{font-size:1.15rem}
+.brand .logo{font-size:1.05rem}
+.tag{font-family:var(--display); font-size:.58rem}
+.callout .msg{font-size:1.35rem}
+.callout .msg em{color:var(--gold)}
+.rules ol{font-size:1.02rem}
+.rules b{color:var(--gold)}
+.cell{border-width:3px}
+.cell::before{content:""; position:absolute; inset:0; pointer-events:none; box-shadow:inset 5px 5px 0 rgba(255,255,255,.3), inset -5px -5px 0 rgba(0,0,0,.35)}
+.cell-name{font-family:var(--display); font-size:calc(var(--cs) * .095); line-height:1.35; text-transform:uppercase}
+.cell-cat{font-family:var(--body); font-weight:600; font-size:calc(var(--cs) * .115)}
+.cell-n{font-family:var(--display); font-size:calc(var(--cs) * .07)}
+.cell.chal{box-shadow:inset 0 0 0 5px var(--gold); animation:blink .7s steps(2) infinite}
+@keyframes blink{50%{filter:brightness(1.55)}}
+.cell.target{outline:3px dashed #fff; outline-offset:-12px}
+.duel-cat{font-size:clamp(1rem, 3vw, 1.8rem); text-transform:uppercase; color:var(--gold); text-shadow:3px 3px 0 #000; line-height:1.35}
+.pl, .stage{border-radius:0; border-width:3px; box-shadow:6px 6px 0 #000}
+.pl.on{box-shadow:0 0 0 4px var(--c), 8px 8px 0 #000}
+.pl-name{font-family:var(--display); font-size:clamp(.72rem, 1.5vw, 1.05rem); line-height:1.45; text-transform:uppercase}
+.clock{font-family:var(--display); font-size:clamp(1.7rem, 4.4vw, 3.4rem)}
+.tbar{border-radius:0; height:14px; border:2px solid var(--line)}
+.tbar i{border-radius:0}
+.turn{font-family:var(--display); font-size:.62rem; line-height:1.6}
+.prompt{font-size:clamp(1.1rem, 2.4vw, 1.5rem)}
+.clue.text{font-family:var(--display); font-size:clamp(18px, 4.2vmin, 52px); line-height:1.45}
+.clue.state .state-name{font-size:clamp(16px, 3.6vmin, 40px); text-transform:uppercase}
+.reveal{font-family:var(--display); font-size:clamp(.95rem, 2.4vw, 1.6rem); line-height:1.4}
+.last{font-size:1.05rem}
+.clue.photo img, .clue.world svg{border-radius:0; border:3px solid var(--line); box-shadow:6px 6px 0 #000}
+.overlay h2, .champ h1{font-family:var(--display); text-transform:uppercase; line-height:1.35}
+.overlay h2{font-size:clamp(1rem, 3.2vw, 2.1rem)}
+.overlay p{font-size:1.2rem}
+.cd{font-size:clamp(4rem, 16vmin, 9rem); text-shadow:6px 6px 0 var(--pink)}
+.champ h1{font-size:clamp(1.6rem, 6.5vw, 4.4rem); text-shadow:5px 5px 0 #000}
+.champ p{font-family:var(--display); font-size:.8rem; line-height:1.6}
+.ph img, .swatch, .custom-item, .tabs, .tab, .drop, .x, .qr, .ph .x{border-radius:0}
+.tab{font-family:var(--display); font-size:.55rem}
+.modal-card{border-radius:0; border:3px solid var(--line); box-shadow:8px 8px 0 #000}
+.modal-card h2{font-size:.95rem; text-transform:uppercase; line-height:1.5; color:var(--gold)}
+.code{font-family:var(--display); font-size:1.4rem; color:var(--cyan)}
+.r-btn, .r-chip, .r-card, .r-pl, .r-clue img, .r-clue svg{border-radius:0}
+.r-btn{font-family:var(--display); font-size:.75rem; line-height:1.4; text-transform:uppercase; box-shadow:4px 4px 0 #000; border-width:2px}
+.r-btn:active{transform:translate(2px,2px); box-shadow:2px 2px 0 #000}
+.r-actions .r-btn{font-size:.62rem}
+.r-btn.good, .r-actions .r-btn.good{font-size:1.25rem}
+.r-btn.who{font-size:.9rem}
+.r-chip{font-family:var(--display); font-size:.62rem; line-height:1.5; box-shadow:3px 3px 0 #000; text-transform:uppercase}
+.r-chip small{font-family:var(--body); font-size:.85rem; text-transform:none}
+.r-pl.on{box-shadow:0 0 0 3px var(--c), 4px 4px 0 #000}
+.r-pl b{font-family:var(--display); font-size:.6rem; line-height:1.6}
+.r-clk{font-family:var(--display); font-size:1.35rem; line-height:1.4}
+.r-ans{font-family:var(--display); font-size:clamp(1.05rem, 6vw, 1.6rem); line-height:1.4; text-shadow:3px 3px 0 #000}
+.r-msg{font-size:1.25rem}
+.r-txt{font-family:var(--display); font-size:1rem; line-height:1.5}
+.r-cd{font-family:var(--display); font-size:5rem; text-shadow:5px 5px 0 var(--pink)}
+.r-card{box-shadow:5px 5px 0 #000; border-width:2px}
+.r-head .logo{font-size:.85rem}
+@media (prefers-reduced-motion:reduce){ body{animation:none} .cell.chal{animation:none} }
 </style>
 </head>
 <body>
 <div id="app"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 /* ================= Clue packs ================= */
 const P = s => s.trim().split('\n').map(l => l.trim()).filter(Boolean).map(l => { const i = l.indexOf('|'); return i < 0 ? [l, ''] : [l.slice(0, i).trim(), l.slice(i + 1).trim()]; });
@@ -1001,7 +1164,7 @@ regalo|gift`)},
 ];
 const WORDS = 'PARTY CANDLE BALLOON PRESENT GUITAR PLANET ORANGE GARDEN PIRATE ROCKET CASTLE WINTER SUMMER PENCIL BASKET MONKEY DRAGON CAMERA JUNGLE TURTLE PICNIC ISLAND SPIDER BUTTER COOKIE FOREST CHERRY PUZZLE MAGNET TICKET MARBLE HAMMER BRIDGE CACTUS FINGER JACKET KITTEN LADDER PILLOW SCHOOL TOMATO WALLET YELLOW ZIPPER BANANA CIRCUS DONKEY GOBLIN HELMET KETTLE LIZARD MUFFIN NAPKIN PEPPER RABBIT SALMON TEAPOT VIOLIN WIZARD CONFETTI'.split(' ');
 
-const COLORS = ['#e4572e','#2f8fd0','#8a4fd8','#17966f','#d6338a','#c98a12','#3a5fd9','#c2410c','#0f8f99','#b5179e','#5f8f1b','#d9485f','#5b6ee1','#a16207','#0e7490','#9d4edd','#15803d','#be123c','#2563eb','#b7791f','#7c3aed','#0891b2','#c026d3','#4d7c0f','#db2777','#0369a1','#9333ea','#047857','#ea580c','#4f46e5'];
+const COLORS = ['#e8173a','#00a8cc','#e0a800','#8a2be2','#16a843','#ff6a00','#2a5cff','#ff2ea6','#00a693','#c0392b','#6c5ce7','#c99a06','#0a8fe0','#e84393','#22994f','#ff4757','#3742fa','#ec8f00','#1fb85c','#a55eea','#1e7fe0','#ff5533','#1aa35a','#8854d0','#eb3b5a','#0d9e97','#f07a1a','#4b7bec','#d9a20f','#2f95d8'];
 
 /* ================= Helpers ================= */
 const $ = s => document.querySelector(s);
@@ -1020,7 +1183,7 @@ let PHOTO_CATS = [];
 const PB = {}, pbLoading = {};
 function loadPB(id){
   if (pbLoading[id]) return pbLoading[id];
-  return pbLoading[id] = fetch(`photos/${id}.json`).then(r => r.json()).then(a => { PB[id] = a; if (typeof D !== 'undefined' && D && D.cat === id) paintDuel(); })
+  return pbLoading[id] = fetch(`photos/${id}.json`).then(r => r.json()).then(a => { PB[id] = a; if (typeof D !== 'undefined' && D && D.cat === id) paintDuel(); if (window.onPBLoaded) window.onPBLoaded(); })
     .catch(() => { delete pbLoading[id]; });
 }
 function pbUrl(q){ const [, id, i] = q.split(':'); if (!PB[id]){ loadPB(id); return null; } return PB[id][+i]; }
@@ -1060,12 +1223,12 @@ const sfx = {
 /* ================= State ================= */
 const PHOTO_FOR = {actors:'ph-actors', mammals:'ph-animals', disney:'ph-disney-characters', athletes:'ph-famous-athletes', produce:'ph-fruits-and-vegetables', kitchen:'ph-kitchen-items', logos:'ph-logos', ocean:'ph-ocean-animals'};
 const defaultDraft = () => ({
-  example: true,
-  rows: ['Birthday Star','Alex','Sam','Jordan','Riley','Casey','Morgan','Taylor','Jamie','Drew','Quinn'].map((n, i) => ({name:n, cat:PHOTO_FOR[PARTY[i].id] || PARTY[i].id})),
+  example: false, blankStart: true,
+  rows: [{name:'', cat:'ph-actors'}, {name:'', cat:'ph-animals'}],
   seconds: 30, pass: 3, shuffleSeats: true,
 });
 let draft = store.get('sq_draft');
-if (!draft || draft.example) draft = defaultDraft();
+if (!draft || draft.example || !draft.blankStart) draft = defaultDraft();
 let S = store.get('sq_game');          // game in progress
 let D = null;                          // live duel
 let flashId = null, picking = false;
@@ -1102,7 +1265,7 @@ function renderSetup(err = ''){
     <div class="setup-grid">
       <section class="card">
         <h2>Players <span class="pill">${draft.rows.length}</span>${draft.example ? '<span class="pill">Example names</span>' : ''}</h2>
-        <p class="hint">Type in your guests and give each one a category. That's the category they defend when someone challenges them.</p>
+        <p class="hint">Type each guest's name and press Enter for the next one. When everyone's in, press Deal random categories. Each player defends their category when challenged.</p>
         <div class="plist">
           ${draft.rows.map((r, i) => `
           <div class="prow">
@@ -1114,7 +1277,7 @@ function renderSetup(err = ''){
         </div>
         <div class="row" style="margin-top:12px">
           <button class="btn" id="addP">Add player</button>
-          <button class="btn ghost" id="mixCats">Deal random categories</button>
+          <button class="btn gold" id="mixCats">Deal random categories</button>
           ${draft.example ? '<button class="btn ghost" id="clearP">Clear example names</button>' : ''}
         </div>
       </section>
@@ -1124,7 +1287,7 @@ function renderSetup(err = ''){
           <div class="row">
             <div class="field"><label for="secs">Seconds per player</label>
               <select id="secs">${[20,30,45,60].map(s => `<option${s == draft.seconds ? ' selected' : ''}>${s}</option>`).join('')}</select></div>
-            <div class="field"><label for="passS">Pass shows answer for</label>
+            <div class="field"><label for="passS">Pass costs</label>
               <select id="passS">${[2,3,5].map(s => `<option value="${s}"${s == draft.pass ? ' selected' : ''}>${s} seconds</option>`).join('')}</select></div>
           </div>
           <label class="check"><input type="checkbox" id="seats"${draft.shuffleSeats ? ' checked' : ''}> Random seats on the board</label>
@@ -1136,7 +1299,7 @@ function renderSetup(err = ''){
             <li>Everyone gets a <b>square</b> and a <b>category</b>.</li>
             <li>A random player <b>challenges a neighbor</b>. The duel is in the <b>defender's category</b>.</li>
             <li>Each player has a clock. A clue appears and the player on the clock shouts the answer. When they get it right, their clock stops and their opponent's starts.</li>
-            <li><b>Pass</b> reveals the answer for a few seconds while your clock keeps running.</li>
+            <li><b>Pass</b> costs 3 seconds and brings up a new clue.</li>
             <li>Run out of time and you're out. The winner takes all your squares and the category that wasn't played.</li>
             <li>Last one standing owns the board.</li>
           </ol>
@@ -1151,6 +1314,14 @@ function renderSetup(err = ''){
   </div>`;
 
   app.querySelectorAll('.pname').forEach(el => el.addEventListener('input', e => { draft.rows[+e.target.dataset.i].name = e.target.value; draft.example = false; saveDraft(); }));
+  app.querySelectorAll('.pname').forEach(el => el.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const i = +e.target.dataset.i, next = $(`#pn-${i + 1}`);
+    if (next){ next.focus(); return; }
+    if (!e.target.value.trim()) return;
+    $('#addP').click();
+  }));
   app.querySelectorAll('.pcat').forEach(el => el.addEventListener('change', e => { draft.rows[+e.target.dataset.i].cat = e.target.value; saveDraft(); }));
   app.querySelectorAll('[data-del]').forEach(el => el.addEventListener('click', () => { draft.rows.splice(+el.dataset.del, 1); saveDraft(); renderSetup(); }));
   $('#addP').onclick = () => {
@@ -1162,7 +1333,9 @@ function renderSetup(err = ''){
   };
   $('#mixCats').onclick = () => {
     let deck = [];
-    draft.rows.forEach(r => { if (!deck.length) deck = shuffle(allCats().map(c => c.id)); r.cat = deck.pop(); });
+    const twins = new Set(Object.keys(PHOTO_FOR).filter(k => PHOTO_CATS.some(c => c.id === PHOTO_FOR[k])));
+    const pool = allCats().filter(c => !twins.has(c.id)).map(c => c.id);
+    draft.rows.forEach(r => { if (!deck.length) deck = shuffle(pool); r.cat = deck.pop(); });
     saveDraft(); renderSetup();
   };
   const cl = $('#clearP'); if (cl) cl.onclick = () => { draft.rows.forEach(r => r.name = ''); draft.example = false; saveDraft(); renderSetup(); };
@@ -1381,6 +1554,7 @@ function renderBoard(){
       <div class="brand"><span class="logo">Square<b>.</b>Off</span><span class="tag">${alive} of ${S.players.length} players left</span></div>
       <div class="actions">
         ${S.history.length ? '<button class="btn ghost" id="undo">Undo last duel</button>' : ''}
+        <button class="btn ghost" id="remoteBtn">Phone remote</button>
         <button class="btn ghost" id="snd">${soundOn ? 'Sound on' : 'Sound off'}</button>
         <button class="btn ghost" id="fs">Fullscreen</button>
         <button class="btn ghost" id="setup">Players &amp; settings</button>
@@ -1391,6 +1565,7 @@ function renderBoard(){
   </div>`;
   const u = $('#undo'); if (u) u.onclick = undo;
   $('#snd').onclick = () => { soundOn = !soundOn; store.set('sq_sound', soundOn); renderBoard(); };
+  $('#remoteBtn').onclick = openRemoteModal; remoteStatus();
   $('#fs').onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); } catch {} };
   $('#setup').onclick = () => { renderSetup(); };
   $('#board').addEventListener('click', onCellClick);
@@ -1482,6 +1657,7 @@ function undo(){
 
 /* ================= Duel ================= */
 function drawClue(catId){
+  if (D) D.seq = (D.seq || 0) + 1;
   const c = cat(catId);
   if (c.gen) return c.gen();
   if (!c.items || !c.items.length) return drawClue(BUILTIN[0].id);
@@ -1526,7 +1702,7 @@ function renderDuel(){
     </div>
     <div class="controls">
       <button class="btn good big" id="bOk">Correct <kbd>Space</kbd></button>
-      <button class="btn warn big" id="bPass">Pass <kbd>P</kbd></button>
+      <button class="btn warn big" id="bPass">Pass −${S.pass}s <kbd>P</kbd></button>
       <button class="btn ghost" id="bSkip">Skip bad clue <kbd>S</kbd></button>
       <button class="btn ghost" id="bAns">Show answer to host <kbd>A</kbd></button>
       <button class="btn ghost" id="bPause">Pause <kbd>Esc</kbd></button>
@@ -1577,7 +1753,7 @@ function paintDuel(){
   if (D.phase === 'pass'){ rv.className = 'reveal'; rv.textContent = D.clue.a || '(no answer)'; }
   else if (D.showAns && live && D.clue){ rv.className = 'reveal host'; rv.textContent = 'Answer: ' + (D.clue.a || '—'); }
   else { rv.className = 'reveal'; rv.textContent = ''; }
-  $('#last').innerHTML = D.last ? `Last answer: <b>${esc(D.last)}</b>` : '';
+  $('#last').innerHTML = D.last ? `${D.lastPass ? 'Passed. It was' : 'Last answer:'} <b${D.lastPass ? ' style="color:var(--warn)"' : ''}>${esc(D.last)}</b>` : '';
   $('#bOk').disabled = D.phase !== 'run';
   $('#bPass').disabled = D.phase !== 'run';
   $('#bSkip').disabled = D.phase !== 'run';
@@ -1633,20 +1809,24 @@ function countdown(first){
   const t = setInterval(() => {
     if (!D || D.phase !== 'count'){ clearInterval(t); return; }
     D.cd--;
-    if (D.cd > 0){ const el = $('#cd'); if (el) el.textContent = D.cd; sfx.blip(); }
+    if (D.cd > 0){ const el = $('#cd'); if (el) el.textContent = D.cd; sfx.blip(); queueBroadcast(); }
     else { clearInterval(t); sfx.go(); D.phase = 'run'; D.clue = drawClue(D.cat); paintDuel(); }
   }, 750);
 }
 
 function correct(){
   if (!D || D.phase !== 'run') return;
-  sfx.ding(); D.last = D.clue.a || D.clue.q;
+  sfx.ding(); D.last = D.clue.a || D.clue.q; D.lastPass = false;
   D.active = D.active === D.a ? D.b : D.a;
   D.clue = drawClue(D.cat); paintDuel();
 }
 function pass(){
   if (!D || D.phase !== 'run') return;
-  sfx.pass(); D.phase = 'pass'; D.passUntil = performance.now() + S.pass * 1000; paintDuel();
+  sfx.pass();
+  const id = D.active;
+  D.time[id] -= S.pass * 1000; D.last = D.clue.a || D.clue.q; D.lastPass = true;
+  if (D.time[id] <= 0){ D.time[id] = 0; endDuel(id === D.a ? D.b : D.a); return; }
+  D.clue = drawClue(D.cat); paintDuel(); updateClocks();
 }
 function skip(){
   if (!D || D.phase !== 'run') return;
@@ -1747,14 +1927,264 @@ function confetti(){
   })(performance.now());
 }
 
+/* ================= Phone remote (host side + phone side) ================= */
+const REMOTE_CODE = (new URLSearchParams(location.search).get('remote') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const conns = new Set();
+let peer = null;
+function newRoom(){ const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; const c = Array.from({length:5}, () => a[rand(a.length)]).join(''); store.set('sq_room', c); return c; }
+let roomCode = store.get('sq_room') || newRoom();
+const peerId = code => 'squareoff-' + code.toLowerCase();
+const remoteURL = () => `${location.origin}${location.pathname}?remote=${roomCode}`;
+const stripTags = x => String(x || '').replace(/<[^>]*>/g, '');
+
+function clueForRemote(){
+  if (!D || !D.clue) return null;
+  const c = cat(D.cat), q = String(D.clue.q); let k = c.style || 'text';
+  if (k === 'photo'){ if (q.startsWith('pb:')) k = 'pb'; else return {k:'img', q:imgs[q.slice(4)] || '', a:D.clue.a, p:D.clue.p}; }
+  if (k === 'auto') k = /[A-Za-z0-9]/.test(q) ? 'text' : 'emoji';
+  return {k, q, a:D.clue.a, p:D.clue.p};
+}
+function viewModel(){
+  if (!S) return {phase:'setup'};
+  if (S.phase === 'duel' && D){
+    const P = id => { const p = pl(id); return {id, name:p.name, color:p.color, t:D.time[id]}; };
+    const live = D.phase === 'run' || D.phase === 'pass';
+    return {phase:'duel', duel:{cat:catName(D.cat), a:P(D.a), b:P(D.b), active:D.active, dphase:D.phase, cd:D.cd, seq:D.seq || 0,
+      clue: live ? clueForRemote() : null, last:D.last || '', lastPass:!!D.lastPass, winner:D.winner || null, pass:S.pass}};
+  }
+  if (S.phase === 'champ'){ const w = alivePlayers()[0]; return {phase:'champ', winner: w ? {name:w.name, color:w.color} : null, canUndo:S.history.length > 0}; }
+  if (S.phase !== 'board') return {phase:'setup'};
+  const counts = {}; S.cells.forEach(o => { counts[o] = (counts[o] || 0) + 1; });
+  const lw = S.lastWinner && pl(S.lastWinner);
+  return {phase:'board', board:{
+    players: alivePlayers().map(p => ({id:p.id, name:p.name, color:p.color, cat:catName(p.cat), n:counts[p.id] || 0})),
+    challenger:S.challenger, targets: S.challenger ? [...neighbors(S.challenger)] : [], lastWinner: lw && lw.alive ? lw.id : null,
+    msg:stripTags(S.msg), picking, flash:flashId, canUndo:S.history.length > 0}};
+}
+let bcastQueued = false;
+function queueBroadcast(){
+  if (bcastQueued || !conns.size) return;
+  bcastQueued = true;
+  setTimeout(() => { bcastQueued = false; const m = {type:'view', vm:viewModel()}; conns.forEach(c => { try { c.send(m); } catch {} }); }, 40);
+}
+setInterval(() => {
+  if (!conns.size || !D || !(D.phase === 'run' || D.phase === 'pass')) return;
+  const m = {type:'clock', a:D.time[D.a], b:D.time[D.b], active:D.active};
+  conns.forEach(c => { try { c.send(m); } catch {} });
+}, 200);
+// Anything that repaints the TV also refreshes the phone.
+{ const f = render; render = function(){ f(); queueBroadcast(); }; }
+{ const f = paintBoard; paintBoard = function(){ f(); queueBroadcast(); }; }
+{ const f = paintCallout; paintCallout = function(){ f(); queueBroadcast(); }; }
+{ const f = paintDuel; paintDuel = function(){ f(); queueBroadcast(); }; }
+
+function handleCmd(m){
+  if (!S || !m || !m.cmd) return;
+  const c = m.cmd;
+  if (D){
+    if ((c === 'correct' || c === 'pass' || c === 'skip') && m.seq !== D.seq) return;
+    if (c === 'correct') correct();
+    else if (c === 'pass') pass();
+    else if (c === 'skip') skip();
+    else if (c === 'pause') togglePause();
+    else if (c === 'first' && D.phase === 'pick' && (m.arg === D.a || m.arg === D.b)) countdown(m.arg);
+    else if (c === 'win' && D.phase === 'paused' && (m.arg === D.a || m.arg === D.b)) endDuel(m.arg);
+    else if (c === 'cancelDuel' && (D.phase === 'pick' || D.phase === 'paused')) cancelDuel();
+    else if (c === 'back' && D.phase === 'done') finishDuel();
+    return;
+  }
+  if (S.phase === 'champ'){ if (c === 'newGame') startGame(); else if (c === 'undo') undo(); return; }
+  if (S.phase !== 'board') return;
+  if (!document.querySelector('#board')) render();
+  if (c === 'undo') return undo();
+  if (picking) return;
+  if (c === 'random') randomPick();
+  else if (c === 'again' && S.lastWinner && pl(S.lastWinner) && pl(S.lastWinner).alive){ S.challenger = S.lastWinner; saveGame(); paintCallout(); paintBoard(); }
+  else if (c === 'chal' && pl(m.arg) && pl(m.arg).alive){ S.challenger = m.arg; saveGame(); paintCallout(); paintBoard(); }
+  else if (c === 'cancelChal'){ S.challenger = null; saveGame(); paintCallout(); paintBoard(); }
+  else if (c === 'target' && S.challenger && neighbors(S.challenger).has(m.arg)) startDuel(S.challenger, m.arg);
+}
+
+function initHost(tries = 0){
+  if (REMOTE_CODE || peer || !window.Peer) return;
+  try { peer = new Peer(peerId(roomCode), {debug:0}); } catch { peer = null; return; }
+  peer.on('connection', conn => {
+    conn.on('open', () => { conns.add(conn); try { conn.send({type:'view', vm:viewModel()}); } catch {} remoteStatus(); });
+    conn.on('data', m => { handleCmd(m); queueBroadcast(); });
+    const drop = () => { conns.delete(conn); remoteStatus(); };
+    conn.on('close', drop); conn.on('error', drop);
+  });
+  peer.on('disconnected', () => { try { if (!peer.destroyed) peer.reconnect(); } catch {} });
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id'){
+      try { peer.destroy(); } catch {} peer = null;
+      if (tries < 3) setTimeout(() => initHost(tries + 1), 4000);
+      else { roomCode = newRoom(); setTimeout(() => initHost(0), 300); }
+    }
+  });
+}
+function remoteStatus(){
+  const b = $('#remoteBtn'); if (b){ b.classList.toggle('on-remote', conns.size > 0); b.textContent = conns.size ? 'Phone connected' : 'Phone remote'; }
+  const st = $('#remoteState'); if (st) st.innerHTML = `<span class="dot${conns.size ? ' on' : ''}"></span>${conns.size ? `${conns.size} phone${conns.size > 1 ? 's' : ''} connected` : 'Waiting for a phone…'}`;
+}
+function openRemoteModal(){
+  initHost();
+  const old = $('#remoteModal'); if (old) old.remove();
+  let qr = '';
+  try { const q = qrcode(0, 'M'); q.addData(remoteURL()); q.make(); qr = q.createSvgTag({cellSize:5, margin:2, scalable:true}); } catch {}
+  const m = document.createElement('div'); m.className = 'modal'; m.id = 'remoteModal';
+  m.innerHTML = `<div class="modal-card" role="dialog" aria-label="Phone remote">
+    <h2>Run the game from a phone</h2>
+    <p class="hint" style="margin:0">Scan this with the host's phone camera. The phone shows every answer and has the Correct and Pass buttons.</p>
+    ${qr ? `<div class="qr">${qr}</div>` : ''}
+    <div class="code">${roomCode}</div>
+    <div class="url">${esc(remoteURL())}</div>
+    <div id="remoteState"></div>
+    <p class="hint" style="margin:0">Keep the phone and this laptop on the same Wi-Fi. The remote works on your Vercel site, not inside Claude.</p>
+    <button class="btn gold" id="closeRemote">Done</button></div>`;
+  document.body.appendChild(m);
+  $('#closeRemote').onclick = () => m.remove();
+  m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+  remoteStatus();
+}
+
+function bootRemote(code){
+  document.title = 'Square Off remote';
+  let rp = null, rc = null, vm = null, timer = null;
+  app.innerHTML = `<div class="remote">
+    <div class="r-head"><span class="logo">Square<b>.</b>Off</span><span id="rStat"><span class="dot"></span>Connecting…</span></div>
+    <div class="r-main" id="rMain"><div class="r-sub" style="margin:auto">Connecting to game ${esc(code)}…</div></div></div>`;
+  const setStat = (on, text) => { $('#rStat').innerHTML = `<span class="dot${on ? ' on' : ''}"></span>${esc(text)}`; };
+  const retry = (ms = 2000) => { clearTimeout(timer); timer = setTimeout(connect, ms); };
+  function connect(){
+    clearTimeout(timer);
+    try { if (rc) rc.close(); } catch {} try { if (rp) rp.destroy(); } catch {}
+    if (!window.Peer){ setStat(false, 'No internet connection'); return; }
+    rp = new Peer({debug:0});
+    rp.on('open', () => {
+      rc = rp.connect(peerId(code), {reliable:true});
+      rc.on('open', () => setStat(true, 'Connected'));
+      rc.on('data', onMsg);
+      rc.on('close', () => { setStat(false, 'Reconnecting…'); retry(); });
+      rc.on('error', () => { setStat(false, 'Reconnecting…'); retry(); });
+    });
+    rp.on('error', e => { setStat(false, e.type === 'peer-unavailable' ? 'Game not found. Open Phone remote on the TV.' : 'Reconnecting…'); retry(3000); });
+  }
+  function send(cmd, arg){
+    if (!rc || !rc.open){ setStat(false, 'Not connected. Retrying…'); connect(); return; }
+    try { rc.send({cmd, arg, seq: vm && vm.duel ? vm.duel.seq : 0}); } catch {}
+    if (navigator.vibrate) navigator.vibrate(25);
+  }
+  function onMsg(m){
+    if (!m) return;
+    if (m.type === 'view'){ vm = m.vm; draw(); }
+    else if (m.type === 'clock' && vm && vm.duel){ vm.duel.a.t = m.a; vm.duel.b.t = m.b; vm.duel.active = m.active; clocks(); }
+  }
+  window.onPBLoaded = () => { if (vm && vm.duel && vm.duel.clue && vm.duel.clue.k === 'pb') draw(); };
+  function clocks(){
+    const d = vm.duel;
+    [['A', d.a], ['B', d.b]].forEach(([k, p]) => {
+      const el = $('#rc' + k), box = $('#rp' + k); if (!el) return;
+      el.textContent = fmt(p.t);
+      el.classList.toggle('low', p.t < 5000 && d.active === p.id);
+      box.classList.toggle('on', d.active === p.id);
+    });
+  }
+  function clueHTML(c){
+    if (!c) return '';
+    if (c.k === 'pb'){ const u = pbUrl(c.q); return u ? `<img src="${u}" alt="">` : '<div class="r-txt" style="font-size:1rem">Loading photo…</div>'; }
+    if (c.k === 'img') return c.q ? `<img src="${c.q}" alt="">` : '';
+    if (c.k === 'world') return worldSVG(c.q) || '<div class="r-txt" style="font-size:1rem">Loading map…</div>';
+    if (c.k === 'state'){ const st = SHAPES.states[c.q]; return st ? `<svg viewBox="${st.vb}" aria-hidden="true"><path d="${st.d}" fill-rule="evenodd"/></svg>` : `<div class="r-txt">${esc(c.q)}</div>`; }
+    return `<div class="r-txt ${c.k}">${esc(c.q)}</div>`;
+  }
+  const chip = (p, cmd, extra = '') => `<button class="r-chip${extra}" data-cmd="${cmd}" data-arg="${p.id}" style="background:${p.color}">${esc(p.name)}<small>${esc(p.cat)} · ${p.n} square${p.n === 1 ? '' : 's'}</small></button>`;
+  function draw(){
+    const main = $('#rMain'); if (!vm || !main) return;
+    if (vm.phase === 'setup'){ main.innerHTML = '<div class="r-msg" style="margin:auto">The game is being set up on the TV.</div>'; return; }
+    if (vm.phase === 'champ'){
+      main.innerHTML = `<div class="r-label" style="margin-top:auto">Champion</div>
+        <div class="r-msg" style="font-size:2.2rem;font-family:var(--display);color:${vm.winner ? vm.winner.color : 'var(--gold)'};filter:brightness(1.35)">${esc(vm.winner ? vm.winner.name : '')}</div>
+        <button class="r-btn gold" data-cmd="newGame" style="margin-top:auto">Play again, same players</button>
+        ${vm.canUndo ? '<button class="r-btn" data-cmd="undo">Undo last duel</button>' : ''}`;
+      return;
+    }
+    if (vm.phase === 'board'){
+      const b = vm.board, byId = id => b.players.find(p => p.id === id);
+      let h = '';
+      if (b.picking){
+        const f = byId(b.flash);
+        h = `<div class="r-msg" style="margin-top:20px">Picking a player…</div>${f ? `<div class="r-chips">${chip(f, '', ' flash')}</div>` : ''}`;
+      } else if (b.challenger && byId(b.challenger)){
+        const c = byId(b.challenger);
+        h = `<div class="r-msg"><em>${esc(c.name)}</em> is challenging. Who do they take on?</div>
+          <div class="r-chips">${b.targets.map(id => byId(id)).filter(Boolean).map(p => chip(p, 'target')).join('')}</div>
+          <button class="r-btn" data-cmd="cancelChal">Choose a different challenger</button>`;
+      } else {
+        const w = b.lastWinner && byId(b.lastWinner);
+        h = `${b.msg ? `<div class="r-msg">${esc(b.msg)}</div>` : ''}
+          <button class="r-btn gold" data-cmd="random">Pick a random player</button>
+          ${w ? `<button class="r-btn" data-cmd="again">${esc(w.name)} challenges again</button>` : ''}
+          <div class="r-label">Or choose the challenger · ${b.players.length} left</div>
+          <div class="r-chips">${b.players.map(p => chip(p, 'chal')).join('')}</div>
+          ${b.canUndo ? '<button class="r-btn" data-cmd="undo">Undo last duel</button>' : ''}`;
+      }
+      main.innerHTML = h; return;
+    }
+    const d = vm.duel, A = d.a, B = d.b;
+    const pc = (p, k) => `<div class="r-pl${d.active === p.id ? ' on' : ''}" id="rp${k}" style="--c:${p.color}"><b style="color:${p.color};filter:brightness(1.4)">${esc(p.name)}</b><div class="r-clk" id="rc${k}">${fmt(p.t)}</div></div>`;
+    const head = `<div class="r-label">${esc(d.cat)}</div><div class="r-players">${pc(A, 'A')}${pc(B, 'B')}</div>`;
+    const who = p => `<button class="r-btn who" data-cmd="first" data-arg="${p.id}" style="background:${p.color}">${esc(p.name)}</button>`;
+    if (d.dphase === 'pick'){
+      main.innerHTML = `${head}<div class="r-msg" style="margin-top:12px">Who goes first?</div>${who(A)}${who(B)}<button class="r-btn" data-cmd="cancelDuel" style="margin-top:auto">Cancel duel</button>`;
+    } else if (d.dphase === 'count'){
+      main.innerHTML = `${head}<div class="r-cd" style="margin:auto">${d.cd || ''}</div>`;
+    } else if (d.dphase === 'paused'){
+      main.innerHTML = `${head}<div class="r-msg" style="margin-top:12px">Paused</div>
+        <button class="r-btn gold" data-cmd="pause">Resume</button>
+        <div class="r-label" style="margin-top:10px">Fix a mistake by ending the duel</div>
+        <button class="r-btn" data-cmd="win" data-arg="${A.id}">${esc(A.name)} wins</button>
+        <button class="r-btn" data-cmd="win" data-arg="${B.id}">${esc(B.name)} wins</button>
+        <button class="r-btn" data-cmd="cancelDuel">Cancel duel, no change</button>`;
+    } else if (d.dphase === 'done'){
+      const w = d.winner === A.id ? A : B, l = d.winner === A.id ? B : A;
+      main.innerHTML = `${head}<div class="r-msg" style="margin-top:auto;font-size:1.6rem"><span style="color:${w.color};filter:brightness(1.4)">${esc(w.name)}</span> wins the duel</div>
+        <div class="r-sub">${esc(l.name)} is out.</div><button class="r-btn gold" data-cmd="back" style="margin-top:auto">Back to the board</button>`;
+    } else {
+      const c = d.clue || {};
+      main.innerHTML = `${head}
+        <div class="r-card">
+          ${c.p ? `<div class="r-sub">${esc(c.p)}</div>` : ''}
+          <div class="r-clue ${esc(c.k || '')}">${clueHTML(c)}</div>
+          ${c.k === 'state' ? `<div class="r-sub" style="color:var(--fg);font-weight:700">${esc(c.q)}</div>` : ''}
+          <div class="r-label">Answer</div>
+          <div class="r-ans">${esc(c.a || '—')}</div>
+          ${d.last ? `<div class="r-sub">${d.lastPass ? 'Passed' : 'Last'}: ${esc(d.last)}</div>` : ''}
+        </div>
+        <div class="r-actions">
+          <button class="r-btn good" data-cmd="correct">Correct</button>
+          <button class="r-btn warn" data-cmd="pass">Pass −${d.pass}s</button>
+          <button class="r-btn" data-cmd="skip">Skip clue</button>
+          <button class="r-btn" data-cmd="pause">Pause</button>
+        </div>`;
+    }
+  }
+  $('#rMain').addEventListener('click', e => { const b = e.target.closest('[data-cmd]'); if (b && b.dataset.cmd) send(b.dataset.cmd, b.dataset.arg); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible'){ requestWake(); if (!rc || !rc.open) connect(); } });
+  requestWake(); connect();
+}
+
 /* ================= Wake lock & boot ================= */
 async function requestWake(){ try { await navigator.wakeLock?.request('screen'); } catch {} }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S && S.phase !== 'setup') requestWake(); });
-if (S && S.phase === 'duel') S.phase = 'board';
-(async () => {
-  try { imgs = await Promise.race([idb.getAll(), new Promise((_, rej) => setTimeout(rej, 2500))]) || {}; } catch {}
-  render();
-})();
+if (REMOTE_CODE) bootRemote(REMOTE_CODE);
+else {
+  if (S && S.phase === 'duel') S.phase = 'board';
+  (async () => {
+    try { imgs = await Promise.race([idb.getAll(), new Promise((_, rej) => setTimeout(rej, 2500))]) || {}; } catch {}
+    render(); initHost();
+  })();
+}
 </script>
 
 </body>

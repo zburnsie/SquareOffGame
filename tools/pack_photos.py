@@ -10,7 +10,7 @@ PROMPTS = {
     "Logos": "Whose logo is this?", "Ocean Animals": "Name the sea creature", "Pro Sports Logos": "Which team?",
     "Famous Dishes": "Name the dish", "Harry Potter Characters": "Which Harry Potter character?",
     "Arts and Crafts": "Name the craft", "Toys": "Name the toy", "Landmarks": "Name the landmark",
-    "Pokemon": "Who's that Pokémon?", "Makeup": "Name the makeup item", "Cereal": "Name the cereal",
+    "Pokémon": "Who's that Pokémon?", "Makeup": "Name the makeup item", "Cereal": "Name the cereal",
 }
 ORDER = list(PROMPTS)
 
