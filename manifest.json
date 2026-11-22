@@ -1,0 +1,8 @@
+{
+  "name": "Square Off",
+  "short_name": "Square Off",
+  "start_url": ".",
+  "display": "fullscreen",
+  "background_color": "#05050f",
+  "theme_color": "#05050f"
+}

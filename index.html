@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Square Off: a party trivia game. Win duels, take your neighbors' squares, own the board.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#05050f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Square Off">
 <style>
 :root{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); box-sizing:border-box}
 body{margin:0; font:14px/1.4 system-ui,-apple-system,sans-serif}
@@ -355,6 +361,20 @@ textarea{font-family:var(--body)}
 .r-card{min-height:0}
 .r-clue{min-height:90px}
 .screen, .remote{box-sizing:border-box}
+body.nocursor, body.nocursor *{cursor:none !important}
+html.tv #app{zoom:var(--tvz); width:calc(100vw / var(--tvz)); height:calc(100vh / var(--tvz))}
+.pl{container-type:inline-size}
+.clock{font-size:clamp(1.3rem, 21cqi, 4.4rem)}
+.pl-name{font-size:clamp(.65rem, 8cqi, 1.3rem)}
+.prompt{font-size:1.35rem}
+.reveal{font-size:1.4rem}
+.clue.text{font-size:clamp(1.1rem, 4.2vmin, 3.2rem)}
+.duel-cat{font-size:clamp(1rem, 3vmin, 1.8rem)}
+html.tv .stage.has-photo{padding-block:30px 24px}
+html.tv .stage{gap:6px}
+html.tv .reveal:empty{display:none}
+html.tv .reveal{min-height:0}
+body.has-remote .duel-screen .controls{display:none}
 </style>
 </head>
 <body>
@@ -1379,6 +1399,9 @@ function renderSetup(err = ''){
               <select id="passS">${[2,3,5].map(s => `<option value="${s}"${s == draft.pass ? ' selected' : ''}>${s} seconds</option>`).join('')}</select></div>
           </div>
           <label class="check"><input type="checkbox" id="seats"${draft.shuffleSeats ? ' checked' : ''}> Random seats on the board</label>
+          <div class="field" style="margin-top:12px"><label for="tvSize">TV size (in full screen, or press + and - during the game)</label>
+            <select id="tvSize">${TV_SIZES.map(([k, l]) => `<option value="${k}"${tvZoom() == k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+          <label class="check"><input type="checkbox" id="autoFs"${draft.autoFs !== false ? ' checked' : ''}> Go full screen when the game starts (F key toggles)</label>
         </section>
         ${editorHTML()}
         <section class="card rules">
@@ -1447,9 +1470,11 @@ function renderSetup(err = ''){
   $('#secs').onchange = e => { draft.seconds = +e.target.value; saveDraft(); };
   $('#passS').onchange = e => { draft.pass = +e.target.value; saveDraft(); };
   $('#seats').onchange = e => { draft.shuffleSeats = e.target.checked; saveDraft(); };
+  $('#autoFs').onchange = e => { draft.autoFs = e.target.checked; saveDraft(); };
+  $('#tvSize').onchange = e => { setTvZoom(+e.target.value); };
   bindEditor();
   $('#start').onclick = startGame;
-  const rs = $('#resume'); if (rs) rs.onclick = () => { S.phase = 'board'; render(); };
+  const rs = $('#resume'); if (rs) rs.onclick = () => { if (draft.autoFs !== false) enterFullscreen(); S.phase = 'board'; render(); };
 }
 
 /* ================= Custom category editor (text or photos) ================= */
@@ -1628,7 +1653,35 @@ async function saveCategory(){
   renderSetup();
 }
 
+const TV_SIZES = [[1, 'Normal'], [1.3, 'Big'], [1.6, 'Bigger'], [1.9, 'Huge']];
+function tvZoom(){ const z = +store.get('sq_tvzoom'); return z >= 1 && z <= 2.5 ? z : 1.3; }
+function setTvZoom(z){ store.set('sq_tvzoom', Math.round(Math.min(2.5, Math.max(1, z)) * 10) / 10); applyTv(); }
+function applyTv(){
+  const on = !REMOTE_CODE && !!document.fullscreenElement && tvZoom() > 1;
+  document.documentElement.classList.toggle('tv', on);
+  document.documentElement.style.setProperty('--tvz', tvZoom());
+  if (typeof sizeBoard === 'function') requestAnimationFrame(sizeBoard);
+}
+document.addEventListener('fullscreenchange', applyTv);
+// Esc in full screen exits full screen instead of reaching the page, so leaving full screen mid-duel pauses it.
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && typeof D !== 'undefined' && D && (D.phase === 'run' || D.phase === 'pass')) togglePause();
+});
+function enterFullscreen(){
+  try { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(() => {}); } catch {}
+}
+function toggleFullscreen(){
+  try { if (document.fullscreenElement) document.exitFullscreen(); else enterFullscreen(); } catch {}
+}
+// Hide the mouse pointer on the TV after a few idle seconds in full screen.
+{
+  let idle = null;
+  const wake = () => { document.body.classList.remove('nocursor'); clearTimeout(idle); if (document.fullscreenElement) idle = setTimeout(() => document.body.classList.add('nocursor'), 2500); };
+  document.addEventListener('mousemove', wake);
+  document.addEventListener('fullscreenchange', () => { wake(); if (typeof sizeBoard === 'function') setTimeout(sizeBoard, 60); });
+}
 function startGame(){
+  if (draft.autoFs !== false && !REMOTE_CODE) enterFullscreen();
   const rows = draft.rows.map((r, i) => ({...r, name: r.name.trim() || `Player ${i + 1}`}));
   if (rows.length < 2) return renderSetup('You need at least 2 players.');
   const noCat = rows.find(r => !r.cat);
@@ -1723,7 +1776,7 @@ function paintBoard(){
 
 function sizeBoard(){
   const bw = $('#bw'), b = $('#board'); if (!bw || !b || !S) return;
-  const r = bw.getBoundingClientRect(), rows = Math.ceil(S.cells.length / S.cols);
+  const r = {width: bw.clientWidth, height: bw.clientHeight}, rows = Math.ceil(S.cells.length / S.cols);
   const cs = Math.max(40, Math.floor(Math.min(r.width / S.cols, r.height / rows)));
   b.style.setProperty('--cs', cs + 'px');
   b.style.gridAutoRows = cs + 'px';
@@ -1998,6 +2051,9 @@ requestAnimationFrame(tick);
 
 document.addEventListener('keydown', e => {
   if (e.target.matches('input, textarea, select')) return;
+  if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !REMOTE_CODE){ toggleFullscreen(); return; }
+  if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey && !REMOTE_CODE){ setTvZoom(tvZoom() + 0.1); return; }
+  if ((e.key === '-' || e.key === '_') && !e.metaKey && !e.ctrlKey && !REMOTE_CODE){ setTvZoom(tvZoom() - 0.1); return; }
   if (!D) return;
   const k = e.key.toLowerCase();
   if (D.phase === 'done' && k === 'enter'){ e.preventDefault(); finishDuel(); return; }
@@ -2144,6 +2200,7 @@ function initHost(tries = 0){
   });
 }
 function remoteStatus(){
+  document.body.classList.toggle('has-remote', conns.size > 0);
   const b = $('#remoteBtn'); if (b){ b.classList.toggle('on-remote', conns.size > 0); b.textContent = conns.size ? 'Phone connected' : 'Phone remote'; }
   const st = $('#remoteState'); if (st) st.innerHTML = `<span class="dot${conns.size ? ' on' : ''}"></span>${conns.size ? `${conns.size} phone${conns.size > 1 ? 's' : ''} connected` : 'Waiting for a phone…'}`;
 }

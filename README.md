@@ -19,6 +19,10 @@ Locally: `python3 -m http.server` in this folder, then open http://localhost:800
 
 On the board screen, press **Phone remote** and scan the QR code with the host's phone. The phone shows each clue with its answer and has big **Correct**, **Pass** (−3 seconds and a new clue), **Skip** and **Pause** buttons, plus all the board controls. It connects directly to the TV page through PeerJS, so keep both devices on the same Wi-Fi. The remote works on the deployed site, not inside the Claude preview.
 
+## On the TV
+
+Clicking **Start the game** switches to full screen (turn this off in setup). **F** toggles full screen at any time. In full screen everything is scaled up for a TV: pick Normal, Big, Bigger or Huge in setup, or press **+** / **-** during the game. While a phone remote is connected, the host buttons are hidden from the TV. Leaving full screen during a duel pauses it.
+
 Keyboard controls on the TV during a duel: **Space** correct, **P** pass, **S** skip clue, **A** show answer to host, **M** music on/off, **Esc** pause.
 
 Duel music is an original chiptune loop generated live with the Web Audio API (no audio files). It speeds up when the player on the clock drops under 10 seconds.
