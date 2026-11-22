@@ -342,6 +342,13 @@ textarea{font-family:var(--body)}
 .r-card{box-shadow:5px 5px 0 #000; border-width:2px}
 .r-head .logo{font-size:.85rem}
 @media (prefers-reduced-motion:reduce){ body{animation:none} .cell.chal{animation:none} }
+.prow{grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) 34px}
+.seat{height:34px; display:grid; place-items:center; font-family:var(--display); font-size:.6rem; color:#fff; text-shadow:1px 1px 0 #000}
+.prow.up select{outline:3px solid var(--gold); outline-offset:1px}
+.prow.up .seat{animation:blink .7s steps(2) infinite}
+.next-pick{margin:0 0 12px; font-size:1.1rem}
+.next-pick b{color:var(--gold)}
+@media (prefers-reduced-motion:reduce){ .prow.up .seat{animation:none} }
 </style>
 </head>
 <body>
@@ -1220,11 +1227,12 @@ const sfx = {
 const PHOTO_FOR = {actors:'ph-actors', mammals:'ph-animals', disney:'ph-disney-characters', athletes:'ph-famous-athletes', produce:'ph-fruits-and-vegetables', kitchen:'ph-kitchen-items', logos:'ph-logos', ocean:'ph-ocean-animals'};
 const defaultDraft = () => ({
   example: false, blankStart: true,
-  rows: [{name:'', cat:'ph-actors'}, {name:'', cat:'ph-animals'}],
-  seconds: 30, pass: 3, shuffleSeats: true,
+  rows: [{name:'', cat:''}, {name:'', cat:''}],
+  seconds: 30, pass: 3, shuffleSeats: true, photoOnly: true,
 });
 let draft = store.get('sq_draft');
 if (!draft || draft.example || !draft.blankStart) draft = defaultDraft();
+if (draft.photoOnly === undefined) draft.photoOnly = true;
 let S = store.get('sq_game');          // game in progress
 let D = null;                          // live duel
 let flashId = null, picking = false;
@@ -1243,15 +1251,22 @@ function render(){
 }
 
 /* ================= Setup ================= */
-function catOptions(sel){
-  const opt = c => `<option value="${c.id}"${c.id === sel ? ' selected' : ''}>${esc(c.name)}</option>`;
+function catOptions(sel, taken = new Set()){
+  const opt = c => { const t = taken.has(c.id) && c.id !== sel; return `<option value="${c.id}"${c.id === sel ? ' selected' : ''}${t ? ' disabled' : ''}>${esc(c.name)}${t ? ' (taken)' : ''}</option>`; };
+  const none = `<option value=""${sel ? '' : ' selected'}>Choose a category…</option>`;
+  if (draft.photoOnly){
+    const list = [...PHOTO_CATS, ...custom.filter(c => c.style === 'photo')];
+    const extra = sel && !list.some(c => c.id === sel) ? opt(cat(sel)) : '';
+    return none + list.map(opt).join('') + extra;
+  }
   const u = custom.length ? `<optgroup label="Your photo & custom categories">${custom.map(opt).join('')}</optgroup>` : '';
   const ph = PHOTO_CATS.length ? `<optgroup label="Photo categories">${PHOTO_CATS.map(opt).join('')}</optgroup>` : '';
-  return ph + u + `<optgroup label="Party categories">${PARTY.map(opt).join('')}</optgroup>`
+  return none + ph + u + `<optgroup label="Party categories">${PARTY.map(opt).join('')}</optgroup>`
            + `<optgroup label="More categories">${BUILTIN.filter(c => !PARTY.includes(c)).map(opt).join('')}</optgroup>`;
 }
 function renderSetup(err = ''){
   const inProgress = S && S.phase !== 'setup' && S.phase !== 'champ';
+  const upNext = draft.rows.findIndex(r => !r.cat);
   app.innerHTML = `
   <div class="screen setup">
     <header class="hero">
@@ -1261,19 +1276,22 @@ function renderSetup(err = ''){
     <div class="setup-grid">
       <section class="card">
         <h2>Players <span class="pill">${draft.rows.length}</span>${draft.example ? '<span class="pill">Example names</span>' : ''}</h2>
-        <p class="hint">Type each guest's name and press Enter for the next one. When everyone's in, press Deal random categories. Each player defends their category when challenged.</p>
+        <p class="hint">Type each guest's name and press Enter for the next one. Press Randomize order to shuffle the list: #1 picks a category first, then #2, and so on. Deal random categories fills in anyone who hasn't picked.</p>
+        ${upNext >= 0 && draft.rows.length > 1 ? `<p class="next-pick">Next to pick: <b>${esc(draft.rows[upNext].name.trim() || `Player ${upNext + 1}`)}</b></p>` : ''}
         <div class="plist">
           ${draft.rows.map((r, i) => `
-          <div class="prow">
-            <span class="swatch" style="background:${COLORS[i % COLORS.length]}"></span>
+          <div class="prow${i === upNext ? ' up' : ''}">
+            <span class="seat" style="background:${COLORS[i % COLORS.length]}" title="Pick order">${i + 1}</span>
             <input id="pn-${i}" data-i="${i}" class="pname" value="${esc(r.name)}" placeholder="Player ${i + 1}" aria-label="Player ${i + 1} name">
-            <select id="pc-${i}" data-i="${i}" class="pcat" aria-label="Player ${i + 1} category">${catOptions(r.cat)}</select>
+            <select id="pc-${i}" data-i="${i}" class="pcat" aria-label="Player ${i + 1} category">${catOptions(r.cat, new Set(draft.rows.filter((x, j) => j !== i && x.cat).map(x => x.cat)))}</select>
             <button class="x" data-del="${i}" aria-label="Remove player ${i + 1}">×</button>
           </div>`).join('')}
         </div>
         <div class="row" style="margin-top:12px">
           <button class="btn" id="addP">Add player</button>
+          <button class="btn" id="shuffleP">Randomize order</button>
           <button class="btn gold" id="mixCats">Deal random categories</button>
+          <label class="check" style="margin:0"><input type="checkbox" id="photoOnly"${draft.photoOnly ? ' checked' : ''}> Photo categories only</label>
           ${draft.example ? '<button class="btn ghost" id="clearP">Clear example names</button>' : ''}
         </div>
       </section>
@@ -1318,20 +1336,37 @@ function renderSetup(err = ''){
     if (!e.target.value.trim()) return;
     $('#addP').click();
   }));
-  app.querySelectorAll('.pcat').forEach(el => el.addEventListener('change', e => { draft.rows[+e.target.dataset.i].cat = e.target.value; saveDraft(); }));
+  app.querySelectorAll('.pcat').forEach(el => el.addEventListener('change', e => { draft.rows[+e.target.dataset.i].cat = e.target.value; saveDraft(); renderSetup(); }));
   app.querySelectorAll('[data-del]').forEach(el => el.addEventListener('click', () => { draft.rows.splice(+el.dataset.del, 1); saveDraft(); renderSetup(); }));
   $('#addP').onclick = () => {
     if (draft.rows.length >= 30) return renderSetup('30 players is the limit.');
-    const used = new Set(draft.rows.map(r => r.cat));
-    const next = allCats().find(c => !used.has(c.id)) || pick(allCats());
-    draft.rows.push({name:'', cat:next.id}); saveDraft(); renderSetup();
+    draft.rows.push({name:'', cat:''}); saveDraft(); renderSetup();
     const last = $(`#pn-${draft.rows.length - 1}`); last && last.focus();
   };
   $('#mixCats').onclick = () => {
-    let deck = [];
     const twins = new Set(Object.keys(PHOTO_FOR).filter(k => PHOTO_CATS.some(c => c.id === PHOTO_FOR[k])));
-    const pool = allCats().filter(c => !twins.has(c.id)).map(c => c.id);
-    draft.rows.forEach(r => { if (!deck.length) deck = shuffle(pool); r.cat = deck.pop(); });
+    const pool = (draft.photoOnly ? [...PHOTO_CATS, ...custom.filter(c => c.style === 'photo')] : allCats().filter(c => !twins.has(c.id))).map(c => c.id);
+    if (!pool.length) return renderSetup('Photo categories are still loading. Try again in a moment.');
+    if (!draft.rows.some(r => !r.cat)) draft.rows.forEach(r => { r.cat = ''; });   // everyone has one: deal fresh
+    const taken = new Set(draft.rows.filter(r => r.cat).map(r => r.cat));
+    let deck = shuffle(pool.filter(id => !taken.has(id)));
+    draft.rows.forEach(r => { if (r.cat) return; if (!deck.length) deck = shuffle(pool); r.cat = deck.pop(); });
+    saveDraft(); renderSetup();
+  };
+  $('#shuffleP').onclick = e => {
+    if (draft.rows.length < 2) return;
+    const btn = e.currentTarget;
+    if (draft.rows.some(r => r.cat) && btn.dataset.armed !== '1'){
+      btn.dataset.armed = '1'; btn.textContent = 'Click again: clears picks';
+      setTimeout(() => { if (btn.isConnected){ btn.dataset.armed = ''; btn.textContent = 'Randomize order'; } }, 3000);
+      return;
+    }
+    draft.rows = shuffle(draft.rows).map(r => ({...r, cat:''}));
+    saveDraft(); renderSetup();
+  };
+  $('#photoOnly').onchange = e => {
+    draft.photoOnly = e.target.checked;
+    if (draft.photoOnly){ const ok = new Set([...PHOTO_CATS, ...custom.filter(c => c.style === 'photo')].map(c => c.id)); draft.rows.forEach(r => { if (r.cat && !ok.has(r.cat)) r.cat = ''; }); }
     saveDraft(); renderSetup();
   };
   const cl = $('#clearP'); if (cl) cl.onclick = () => { draft.rows.forEach(r => r.name = ''); draft.example = false; saveDraft(); renderSetup(); };
@@ -1522,6 +1557,8 @@ async function saveCategory(){
 function startGame(){
   const rows = draft.rows.map((r, i) => ({...r, name: r.name.trim() || `Player ${i + 1}`}));
   if (rows.length < 2) return renderSetup('You need at least 2 players.');
+  const noCat = rows.find(r => !r.cat);
+  if (noCat) return renderSetup(`${noCat.name} still needs a category. Pick one, or press Deal random categories.`);
   const players = rows.map((r, i) => ({id:'p' + i, name:r.name, cat:r.cat, color:COLORS[i % COLORS.length], alive:true}));
   const order = draft.shuffleSeats ? shuffle(players.map(p => p.id)) : players.map(p => p.id);
   S = {phase:'board', players, cells:order, cols:Math.ceil(Math.sqrt(order.length)), used:{}, seconds:draft.seconds, pass:draft.pass,
