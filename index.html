@@ -1223,6 +1223,74 @@ const sfx = {
   fanfare(){ [523,659,784,1047].forEach((f,i) => tone(f, .35, 'triangle', .16, i * .14)); },
 };
 
+/* ================= Duel music: original chiptune, generated live ================= */
+const music = (() => {
+  let timer = null, next = 0, step = 0, bus = null, playing = false, intense = false, noiseBuf = null;
+  let on = store.get('sq_music') ?? true;
+  const N = n => 440 * Math.pow(2, (n - 69) / 12);
+  const ROOTS = [45, 43, 41, 40];                       // A minor: Am, G, F, E
+  const CHORDS = [[69, 72, 76, 81], [67, 71, 74, 79], [65, 69, 72, 77], [64, 68, 71, 76]];
+  const ARP = [0, 1, 2, 3, 2, 1, 2, 3, 0, 1, 2, 3, 2, 3, 2, 1];
+  const BASS = [0, 0, 12, 0, 0, 12, 0, 7];
+  function tone(type, freq, t, dur, vol){
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(bus); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function kick(t){
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    o.connect(g).connect(bus); o.start(t); o.stop(t + 0.17);
+  }
+  function hiss(t, dur, vol, hp){
+    if (!noiseBuf){ noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.3), ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = hp;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(f).connect(g).connect(bus); src.start(t); src.stop(t + dur + 0.02);
+  }
+  function schedule(){
+    if (!playing) return;
+    const dt = 60 / (intense ? 178 : 148) / 4;            // sixteenth notes
+    while (next < ac.currentTime + 0.12){
+      const bar = Math.floor(step / 16) % 4, s16 = step % 16;
+      if (s16 % 2 === 0) tone('square', N(ROOTS[bar] + BASS[s16 / 2]), next, dt * 1.8, 0.15);
+      tone('square', N(CHORDS[bar][ARP[s16]]), next, dt * 0.85, intense ? 0.07 : 0.05);
+      if (s16 === 0 || s16 === 8 || (intense && (s16 === 6 || s16 === 14))) kick(next);
+      if (s16 === 4 || s16 === 12) hiss(next, 0.12, 0.35, 1500);
+      if (intense || s16 % 2 === 0) hiss(next, 0.03, 0.12, 7000);
+      next += dt; step++;
+    }
+  }
+  return {
+    get on(){ return on; },
+    set intense(v){ intense = !!v; },
+    start(){
+      if (!on || !soundOn || playing) return;
+      try {
+        ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+        if (ac.state === 'suspended') ac.resume();
+        bus = ac.createGain(); bus.gain.value = 0.22; bus.connect(ac.destination);
+      } catch { return; }
+      playing = true; step = 0; intense = false; next = ac.currentTime + 0.05;
+      timer = setInterval(schedule, 25); schedule();
+    },
+    stop(){
+      if (!playing) return;
+      playing = false; clearInterval(timer);
+      const b = bus;
+      try { b.gain.setTargetAtTime(0, ac.currentTime, 0.05); setTimeout(() => { try { b.disconnect(); } catch {} }, 400); } catch {}
+    },
+    toggle(){
+      on = !on; store.set('sq_music', on);
+      if (!on) this.stop(); else if (typeof D !== 'undefined' && D && D.phase === 'run') this.start();
+      return on;
+    },
+  };
+})();
+
 /* ================= State ================= */
 const PHOTO_FOR = {actors:'ph-actors', mammals:'ph-animals', disney:'ph-disney-characters', athletes:'ph-famous-athletes', produce:'ph-fruits-and-vegetables', kitchen:'ph-kitchen-items', logos:'ph-logos', ocean:'ph-ocean-animals'};
 const defaultDraft = () => ({
@@ -1589,6 +1657,7 @@ function renderBoard(){
         ${S.history.length ? '<button class="btn ghost" id="undo">Undo last duel</button>' : ''}
         <button class="btn ghost" id="remoteBtn">Phone remote</button>
         <button class="btn ghost" id="snd">${soundOn ? 'Sound on' : 'Sound off'}</button>
+        <button class="btn ghost" id="mus">${music.on ? 'Music on' : 'Music off'}</button>
         <button class="btn ghost" id="fs">Fullscreen</button>
         <button class="btn ghost" id="setup">Players &amp; settings</button>
       </div>
@@ -1597,7 +1666,8 @@ function renderBoard(){
     <div class="board-wrap" id="bw"><div class="board" id="board"></div></div>
   </div>`;
   const u = $('#undo'); if (u) u.onclick = undo;
-  $('#snd').onclick = () => { soundOn = !soundOn; store.set('sq_sound', soundOn); renderBoard(); };
+  $('#snd').onclick = () => { soundOn = !soundOn; store.set('sq_sound', soundOn); if (!soundOn) music.stop(); renderBoard(); };
+  $('#mus').onclick = () => { music.toggle(); renderBoard(); };
   $('#remoteBtn').onclick = openRemoteModal; remoteStatus();
   $('#fs').onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); } catch {} };
   $('#setup').onclick = () => { renderSetup(); };
@@ -1843,7 +1913,7 @@ function countdown(first){
     if (!D || D.phase !== 'count'){ clearInterval(t); return; }
     D.cd--;
     if (D.cd > 0){ const el = $('#cd'); if (el) el.textContent = D.cd; sfx.blip(); queueBroadcast(); }
-    else { clearInterval(t); sfx.go(); D.phase = 'run'; D.clue = drawClue(D.cat); paintDuel(); }
+    else { clearInterval(t); sfx.go(); D.phase = 'run'; D.clue = drawClue(D.cat); paintDuel(); music.start(); }
   }, 750);
 }
 
@@ -1868,16 +1938,17 @@ function skip(){
 function toggleAns(){ if (!D) return; D.showAns = !D.showAns; paintDuel(); }
 function togglePause(){
   if (!D) return;
-  if (D.phase === 'run' || D.phase === 'pass'){ D.prev = D.phase; D.pausedAt = performance.now(); D.phase = 'paused'; }
-  else if (D.phase === 'paused'){ D.phase = D.prev; if (D.prev === 'pass') D.passUntil += performance.now() - D.pausedAt; }
+  if (D.phase === 'run' || D.phase === 'pass'){ D.prev = D.phase; D.pausedAt = performance.now(); D.phase = 'paused'; music.stop(); }
+  else if (D.phase === 'paused'){ D.phase = D.prev; if (D.prev === 'pass') D.passUntil += performance.now() - D.pausedAt; music.start(); }
   else return;
   paintDuel(); updateClocks();
 }
 function endDuel(winner){
+  music.stop();
   D.winner = winner; D.phase = 'done'; D.active = null;
   sfx.buzz(); saveGame(); paintDuel(); updateClocks();
 }
-function cancelDuel(){ D = null; S.phase = 'board'; saveGame(); render(); }
+function cancelDuel(){ music.stop(); D = null; S.phase = 'board'; saveGame(); render(); }
 
 function finishDuel(){
   if (!D || D.phase !== 'done') return;
@@ -1902,6 +1973,7 @@ function tick(t){
   if (!D || !(D.phase === 'run' || D.phase === 'pass')) return;
   const id = D.active;
   D.time[id] -= dt;
+  music.intense = D.time[id] < 10000;
   const sec = Math.ceil(D.time[id] / 1000);
   if (sec <= 5 && sec > 0 && D.beeped[id] !== sec){ D.beeped[id] = sec; sfx.tick(); }
   if (D.time[id] <= 0){ D.time[id] = 0; endDuel(id === D.a ? D.b : D.a); return; }
@@ -1920,6 +1992,7 @@ document.addEventListener('keydown', e => {
   else if (k === 's'){ skip(); }
   else if (k === 'a'){ toggleAns(); }
   else if (k === 'escape'){ togglePause(); }
+  else if (k === 'm'){ music.toggle(); }
 });
 
 /* ================= Champion ================= */
