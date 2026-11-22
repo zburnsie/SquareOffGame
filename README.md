@@ -21,7 +21,7 @@ On the board screen, press **Phone remote** and scan the QR code with the host's
 
 ## On the TV
 
-Clicking **Start the game** switches to full screen (turn this off in setup). **F** toggles full screen at any time. In full screen everything is scaled up for a TV: pick Normal, Big, Bigger or Huge in setup, or press **+** / **-** during the game. While a phone remote is connected, the host buttons are hidden from the TV. Leaving full screen during a duel pauses it.
+Clicking **Start the game** switches to full screen (turn this off in setup). **F** toggles full screen at any time. Everything scales up for a TV: pick Normal, Big, Bigger or Huge under Screen size in setup (it applies right away on every screen), or press **+** / **-** at any time. While a phone remote is connected, the host buttons are hidden from the TV. Leaving full screen during a duel pauses it.
 
 Keyboard controls on the TV during a duel: **Space** correct, **P** pass, **S** skip clue, **A** show answer to host, **M** music on/off, **Esc** pause.
 
