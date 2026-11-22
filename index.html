@@ -349,6 +349,12 @@ textarea{font-family:var(--body)}
 .next-pick{margin:0 0 12px; font-size:1.1rem}
 .next-pick b{color:var(--gold)}
 @media (prefers-reduced-motion:reduce){ .prow.up .seat{animation:none} }
+.r-actions{grid-template-columns:1fr 1fr}
+.r-actions .r-btn.good, .r-actions .r-btn.warn{grid-column:1 / -1; font-size:1.25rem; padding:22px 8px}
+.r-actions .r-btn.warn{background:var(--warn); color:#1f1000; border:2px solid #ffc27a}
+.r-card{min-height:0}
+.r-clue{min-height:90px}
+.screen, .remote{box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -1759,20 +1765,28 @@ function undo(){
 }
 
 /* ================= Duel ================= */
+// Each category keeps a shuffled deck that survives new games and refreshes:
+// every clue is shown once, in random order, before anything repeats.
+const decks = store.get('sq_decks') || {};
+function nextFromDeck(catId, n){
+  let d = decks[catId];
+  if (!d || !Array.isArray(d.left) || d.n !== n || !d.left.length){
+    const left = shuffle([...Array(n).keys()]);
+    if (d && d.last != null && n > 1 && left[left.length - 1] === d.last) [left[0], left[left.length - 1]] = [left[left.length - 1], left[0]];
+    d = decks[catId] = {n, left, last: d ? d.last : null};
+  }
+  const i = d.left.pop(); d.last = i;
+  store.set('sq_decks', decks);
+  return i;
+}
 function drawClue(catId){
   if (D) D.seq = (D.seq || 0) + 1;
   const c = cat(catId);
   if (c.gen) return c.gen();
   if (!c.items || !c.items.length) return drawClue(BUILTIN[0].id);
-  const used = S.used[catId] || (S.used[catId] = []);
   const ok = i => !c.items[i][0].startsWith('img:') || imgs[c.items[i][0].slice(4)];
   let i;
-  for (let tries = 0; tries <= c.items.length; tries++){
-    if (used.length >= c.items.length) used.length = 0;
-    do { i = rand(c.items.length); } while (used.includes(i));
-    used.push(i);
-    if (ok(i)) break;
-  }
+  for (let tries = 0; tries <= c.items.length; tries++){ i = nextFromDeck(catId, c.items.length); if (ok(i)) break; }
   return {q:c.items[i][0], a:c.items[i][1], p:c.prompt || ''};
 }
 
@@ -1805,7 +1819,7 @@ function renderDuel(){
     </div>
     <div class="controls">
       <button class="btn good big" id="bOk">Correct <kbd>Space</kbd></button>
-      <button class="btn warn big" id="bPass">Pass −${S.pass}s <kbd>P</kbd></button>
+      <button class="btn warn big" id="bPass">Pass (-${S.pass}s) <kbd>P</kbd></button>
       <button class="btn ghost" id="bSkip">Skip bad clue <kbd>S</kbd></button>
       <button class="btn ghost" id="bAns">Show answer to host <kbd>A</kbd></button>
       <button class="btn ghost" id="bPause">Pause <kbd>Esc</kbd></button>
@@ -2269,7 +2283,7 @@ function bootRemote(code){
         </div>
         <div class="r-actions">
           <button class="r-btn good" data-cmd="correct">Correct</button>
-          <button class="r-btn warn" data-cmd="pass">Pass −${d.pass}s</button>
+          <button class="r-btn warn" data-cmd="pass">Pass (-${d.pass}s)</button>
           <button class="r-btn" data-cmd="skip">Skip clue</button>
           <button class="r-btn" data-cmd="pause">Pause</button>
         </div>`;

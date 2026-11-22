@@ -11,6 +11,7 @@ PROMPTS = {
     "Famous Dishes": "Name the dish", "Harry Potter Characters": "Which Harry Potter character?",
     "Arts and Crafts": "Name the craft", "Toys": "Name the toy", "Landmarks": "Name the landmark",
     "Pokémon": "Who's that Pokémon?", "Makeup": "Name the makeup item", "Cereal": "Name the cereal",
+    "Minecraft": "Name this Minecraft thing", "General Science": "Name it", "Girl Pop Singers": "Who is this singer?",
 }
 ORDER = list(PROMPTS)
 
