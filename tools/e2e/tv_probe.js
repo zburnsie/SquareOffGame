@@ -6,7 +6,7 @@ const { chromium } = require('playwright-core');
   await pg.evaluate(z => localStorage.setItem('sq_tvzoom', z), process.env.Z || '1.9');
   await pg.waitForFunction(() => PHOTO_CATS.length > 0);
   await pg.fill('#pn-0', 'Ann'); await pg.press('#pn-0', 'Enter'); await pg.fill('#pn-1', 'Ben');
-  await pg.selectOption('#pc-0', 'ph-actors'); await pg.selectOption('#pc-1', 'ph-actors').catch(()=>{}); await pg.click('#mixCats');
+  await pg.click('#mixCats');
   await pg.click('#start'); await pg.waitForSelector('#board .cell');
   await pg.click('#board .cell >> nth=0'); await pg.click('#board .cell.target >> nth=0'); await pg.click('#firstA');
   await pg.waitForFunction(() => D && D.phase === 'run'); await pg.waitForTimeout(1200);

@@ -350,7 +350,30 @@ textarea{font-family:var(--body)}
 @media (prefers-reduced-motion:reduce){ body{animation:none} .cell.chal{animation:none} }
 .prow{grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) 34px}
 .seat{height:34px; display:grid; place-items:center; font-family:var(--display); font-size:.6rem; color:#fff; text-shadow:1px 1px 0 #000}
-.prow.up select{outline:3px solid var(--gold); outline-offset:1px}
+.prow.up .pcat{outline:3px solid var(--gold); outline-offset:1px}
+.pcat{display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; width:100%; height:38px; padding:0 12px; text-align:left; font:inherit; font-weight:700; color:var(--fg); background:var(--panel); border:2px solid var(--line); border-radius:8px; cursor:pointer}
+.pcat span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.pcat b{color:var(--gold); font-size:.7em; flex:none}
+.pcat.empty{color:var(--muted); font-weight:600; border-style:dashed}
+.pcat:hover{border-color:var(--gold)}
+.catpick{place-items:stretch center; padding:3vh 3vw}
+.cp-card{background:var(--bg2); border:3px solid var(--line); box-shadow:8px 8px 0 #000; width:min(1200px, 100%); max-height:100%; display:flex; flex-direction:column; min-height:0}
+.cp-head{display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:16px 18px; border-bottom:3px solid var(--line)}
+.cp-head h2{flex:1 1 100%; margin:0; font-family:var(--display); font-size:1rem; line-height:1.5; text-transform:uppercase; color:var(--fg)}
+.cp-head h2 em{font-style:normal; color:var(--gold)}
+.cp-find{flex:1 1 240px; width:auto; font-size:1.05rem; padding:10px 12px}
+.cp-body{overflow-y:auto; padding:6px 18px 18px; min-height:0}
+.cp-group h3{font-family:var(--display); font-size:.75rem; text-transform:uppercase; color:var(--gold); margin:16px 0 10px; letter-spacing:.05em}
+.cp-group h3 span{color:var(--muted)}
+.cp-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px}
+.cp-tile{display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:4px; min-height:74px; padding:10px 12px 10px 16px; text-align:left; background:var(--panel); color:var(--fg); border:2px solid var(--line); border-left:8px solid var(--c); border-radius:6px; cursor:pointer; font:inherit}
+.cp-tile:hover:not([disabled]), .cp-tile:focus-visible{border-color:var(--gold); border-left-color:var(--c); background:color-mix(in srgb, var(--c) 22%, var(--panel)); transform:translate(-2px,-2px); box-shadow:4px 4px 0 #000}
+.cp-tile.on{border-color:var(--gold); border-left-color:var(--gold); background:color-mix(in srgb, var(--gold) 16%, var(--panel))}
+.cp-tile[disabled]{opacity:.4; cursor:not-allowed}
+.cp-tile[hidden], .cp-group[hidden]{display:none}
+.cp-name{font-weight:800; font-size:1.1rem; line-height:1.2}
+.cp-sub{font-size:.82rem; color:var(--muted)}
+.cp-none{color:var(--muted); text-align:center; padding:30px 0}
 .prow.up .seat{animation:blink .7s steps(2) infinite}
 .next-pick{margin:0 0 12px; font-size:1.1rem}
 .next-pick b{color:var(--gold)}
@@ -1346,18 +1369,57 @@ function render(){
 }
 
 /* ================= Setup ================= */
-function catOptions(sel, taken = new Set()){
-  const opt = c => { const t = taken.has(c.id) && c.id !== sel; return `<option value="${c.id}"${c.id === sel ? ' selected' : ''}${t ? ' disabled' : ''}>${esc(c.name)}${t ? ' (taken)' : ''}</option>`; };
-  const none = `<option value=""${sel ? '' : ' selected'}>Choose a category…</option>`;
-  if (draft.photoOnly){
-    const list = [...PHOTO_CATS, ...custom.filter(c => c.style === 'photo')];
-    const extra = sel && !list.some(c => c.id === sel) ? opt(cat(sel)) : '';
-    return none + list.map(opt).join('') + extra;
-  }
-  const u = custom.length ? `<optgroup label="Your photo & custom categories">${custom.map(opt).join('')}</optgroup>` : '';
-  const ph = PHOTO_CATS.length ? `<optgroup label="Photo categories">${PHOTO_CATS.map(opt).join('')}</optgroup>` : '';
-  return none + ph + u + `<optgroup label="Party categories">${PARTY.map(opt).join('')}</optgroup>`
-           + `<optgroup label="More categories">${BUILTIN.filter(c => !PARTY.includes(c)).map(opt).join('')}</optgroup>`;
+function catGroups(){
+  if (draft.photoOnly) return [['Photo categories', [...PHOTO_CATS, ...custom.filter(c => c.style === 'photo')]]];
+  return [['Photo categories', PHOTO_CATS], ['Your categories', custom], ['Party categories', PARTY],
+          ['More categories', BUILTIN.filter(c => !PARTY.includes(c))]].filter(g => g[1].length);
+}
+function openCatPicker(i){
+  const row = draft.rows[i]; if (!row) return;
+  const owner = {}; draft.rows.forEach((r, j) => { if (j !== i && r.cat) owner[r.cat] = r.name.trim() || `Player ${j + 1}`; });
+  const who = row.name.trim() || `Player ${i + 1}`;
+  const m = document.createElement('div');
+  m.className = 'modal catpick'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', `Category for ${who}`);
+  const tile = (c, k) => {
+    const n = (c.items || []).length, t = owner[c.id], on = c.id === row.cat;
+    return `<button type="button" class="cp-tile${on ? ' on' : ''}" data-cat="${esc(c.id)}" data-name="${esc(c.name.toLowerCase())}" style="--c:${COLORS[k % COLORS.length]}"${t ? ' disabled' : ''}>
+      <span class="cp-name">${esc(c.name)}</span>
+      <span class="cp-sub">${t ? `Taken by ${esc(t)}` : on ? 'Current pick' : c.style === 'photo' ? `${n} photos` : n ? `${n} clues` : ''}</span></button>`;
+  };
+  let k = 0;
+  m.innerHTML = `<div class="cp-card">
+    <div class="cp-head">
+      <h2>Pick a category for <em>${esc(who)}</em></h2>
+      <input class="cp-find" placeholder="Type to search…" aria-label="Search categories">
+      ${row.cat ? '<button type="button" class="btn" data-cat="">Clear pick</button>' : ''}
+      <button type="button" class="btn ghost cp-close" aria-label="Close">Close ✕</button>
+    </div>
+    <div class="cp-body">${catGroups().map(([label, list]) => `<section class="cp-group"><h3>${esc(label)} <span>${list.length}</span></h3>
+      <div class="cp-grid">${list.map(c => tile(c, k++)).join('')}</div></section>`).join('')}
+      <p class="cp-none" hidden>No categories match.</p></div>
+  </div>`;
+  const close = () => { m.remove(); document.removeEventListener('keydown', onKey, true); const b = $(`#pc-${i}`); b && b.focus(); };
+  const onKey = e => { if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); close(); } };
+  document.addEventListener('keydown', onKey, true);
+  m.addEventListener('click', e => {
+    if (e.target === m || e.target.closest('.cp-close')) return close();
+    const b = e.target.closest('[data-cat]'); if (!b || b.disabled) return;
+    row.cat = b.dataset.cat; saveDraft(); close(); renderSetup();
+    const nx = draft.rows.findIndex(r => !r.cat); const nb = nx >= 0 && $(`#pc-${nx}`); nb && nb.focus();
+  });
+  const find = m.querySelector('.cp-find');
+  find.addEventListener('input', () => {
+    const q = find.value.trim().toLowerCase(); let any = false;
+    m.querySelectorAll('.cp-group').forEach(g => {
+      let vis = 0; g.querySelectorAll('.cp-tile').forEach(t => { const ok = !q || t.dataset.name.includes(q); t.hidden = !ok; vis += ok; });
+      g.hidden = !vis; any = any || vis > 0;
+    });
+    m.querySelector('.cp-none').hidden = any;
+  });
+  find.addEventListener('keydown', e => { if (e.key === 'Enter'){ const t = m.querySelector('.cp-tile:not([hidden]):not([disabled])'); if (t){ e.preventDefault(); t.click(); } } });
+  app.appendChild(m);
+  (m.querySelector('.cp-tile.on') || m.querySelector('.cp-tile:not([disabled])') || find).scrollIntoView({block:'nearest'});
+  find.focus();
 }
 function renderSetup(err = ''){
   const inProgress = S && S.phase !== 'setup' && S.phase !== 'champ';
@@ -1378,7 +1440,7 @@ function renderSetup(err = ''){
           <div class="prow${i === upNext ? ' up' : ''}">
             <span class="seat" style="background:${COLORS[i % COLORS.length]}" title="Pick order">${i + 1}</span>
             <input id="pn-${i}" data-i="${i}" class="pname" value="${esc(r.name)}" placeholder="Player ${i + 1}" aria-label="Player ${i + 1} name">
-            <select id="pc-${i}" data-i="${i}" class="pcat" aria-label="Player ${i + 1} category">${catOptions(r.cat, new Set(draft.rows.filter((x, j) => j !== i && x.cat).map(x => x.cat)))}</select>
+            <button type="button" id="pc-${i}" data-i="${i}" class="pcat${r.cat ? '' : ' empty'}" data-val="${esc(r.cat || '')}" aria-haspopup="dialog" aria-label="Player ${i + 1} category: ${esc(r.cat ? cat(r.cat).name : 'none')}"><span>${r.cat ? esc(cat(r.cat).name) : 'Choose a category…'}</span><b aria-hidden="true">▼</b></button>
             <button class="x" data-del="${i}" aria-label="Remove player ${i + 1}">×</button>
           </div>`).join('')}
         </div>
@@ -1434,7 +1496,7 @@ function renderSetup(err = ''){
     if (!e.target.value.trim()) return;
     $('#addP').click();
   }));
-  app.querySelectorAll('.pcat').forEach(el => el.addEventListener('change', e => { draft.rows[+e.target.dataset.i].cat = e.target.value; saveDraft(); renderSetup(); }));
+  app.querySelectorAll('.pcat').forEach(el => el.addEventListener('click', () => openCatPicker(+el.dataset.i)));
   app.querySelectorAll('[data-del]').forEach(el => el.addEventListener('click', () => { draft.rows.splice(+el.dataset.del, 1); saveDraft(); renderSetup(); }));
   $('#addP').onclick = () => {
     if (draft.rows.length >= 30) return renderSetup('30 players is the limit.');

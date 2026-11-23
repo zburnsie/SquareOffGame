@@ -19,7 +19,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   for (let i = 1; i < names.length; i++) { await tv.fill(`#pn-${i}`, names[i]); if (i < names.length - 1) await tv.press(`#pn-${i}`, 'Enter'); }
   await sleep(1500); // let photo index load so Deal uses photo categories
   await tv.click('#mixCats');
-  const cats = await tv.$$eval('.pcat', els => els.map(e => e.options[e.selectedIndex].text));
+  const cats = await tv.$$eval('.pcat', els => els.map(e => e.textContent.trim()));
   console.log('dealt:', cats.join(' | '));
   await tv.screenshot({ path: OUT + '/e2e_setup.png' });
   await tv.click('#start'); await tv.waitForSelector('#board .cell');
