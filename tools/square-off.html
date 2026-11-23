@@ -1,0 +1,2349 @@
+<title>Square Off</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-screen game-show stage. Setup sheet, then the square board, then a two-clock duel arena. */
+:root{
+  color-scheme: dark;
+  --bg:#130f1f; --bg2:#1b1630; --panel:#231d39; --line:#3a3159;
+  --fg:#f5f0fb; --muted:#a69cc2;
+  --gold:#ffc94d; --sea:#12223a; --land:#4b4470; --good:#33d18f; --warn:#ff9f43; --bad:#ff5d6c;
+  --display:"Bricolage Grotesque","Arial Black",system-ui,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(ellipse 80% 60% at 50% -10%, #2b2150 0%, transparent 70%);
+  color:var(--fg); font-family:var(--body); font-size:15px; overflow:hidden;
+}
+#app{height:100%}
+.screen{height:100%; display:flex; flex-direction:column; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); padding-block:14px;}
+button{font:inherit; cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold); outline-offset:2px}
+.btn{border:0; border-radius:10px; padding:10px 16px; font-weight:600; color:var(--fg); background:var(--panel); border:1px solid var(--line); display:inline-flex; align-items:center; gap:8px; justify-content:center; white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.35; cursor:not-allowed}
+.btn.gold{background:var(--gold); color:#2a1d00; border-color:var(--gold)}
+.btn.good{background:var(--good); color:#062417; border-color:var(--good)}
+.btn.warn{background:transparent; color:var(--warn); border:2px solid var(--warn)}
+.btn.ghost{background:transparent}
+.btn.big{padding:14px 26px; font-size:1.15rem; border-radius:12px}
+kbd{font-family:var(--mono); font-size:.72em; padding:2px 6px; border-radius:5px; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.18)}
+.btn.warn kbd{background:transparent}
+.eyebrow{text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:700; color:var(--muted)}
+.logo{font-family:var(--display); font-weight:800; letter-spacing:-.02em}
+.logo b{color:var(--gold)}
+
+/* ---------- Setup ---------- */
+.setup{overflow-y:auto; display:block}
+.hero{max-width:1100px; margin:8px auto 20px; display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px}
+.hero .logo{font-size:clamp(2.6rem, 7vw, 4.6rem); line-height:.95; margin:0}
+.hero p{margin:0; color:var(--muted); max-width:44ch; text-wrap:balance}
+.setup-grid{max-width:1100px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:18px}
+.card{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:18px}
+.card h2{font-family:var(--display); font-weight:800; font-size:1.25rem; margin:0 0 4px; display:flex; align-items:center; gap:10px}
+.card .hint{color:var(--muted); margin:0 0 14px; font-size:.9rem}
+.pill{font-family:var(--body); font-size:.72rem; font-weight:700; background:var(--panel); border:1px solid var(--line); border-radius:99px; padding:2px 9px; color:var(--muted)}
+.plist{display:flex; flex-direction:column; gap:8px}
+.prow{display:grid; grid-template-columns:14px minmax(0,1fr) minmax(0,1fr) 34px; gap:8px; align-items:center}
+.swatch{width:14px; height:34px; border-radius:4px}
+input,select,textarea{font:inherit; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; min-width:0; width:100%}
+textarea{min-height:120px; resize:vertical; font-family:var(--mono); font-size:.82rem; line-height:1.5}
+.x{background:transparent; border:1px solid var(--line); color:var(--muted); border-radius:8px; height:34px; font-size:1.1rem}
+.x:hover{color:var(--bad); border-color:var(--bad)}
+.row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.side{display:flex; flex-direction:column; gap:18px; min-width:0}
+.field{display:flex; flex-direction:column; gap:6px; flex:1; min-width:120px}
+.field label{font-size:.8rem; color:var(--muted); font-weight:600}
+.check{display:flex; gap:8px; align-items:center; color:var(--muted); font-size:.9rem; margin-top:12px}
+.check input{width:auto}
+.rules ol{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:7px; color:var(--muted); font-size:.92rem; line-height:1.45}
+.rules b{color:var(--fg)}
+.customs{display:flex; flex-direction:column; gap:6px; margin-top:12px}
+.custom-item{display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 6px 6px 10px; font-size:.9rem}
+.custom-item span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.startbar{max-width:1100px; margin:20px auto 8px; display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+.err{color:var(--bad); font-weight:600}
+@media (max-width:820px){ .setup-grid{grid-template-columns:minmax(0,1fr)} }
+
+/* ---------- Board ---------- */
+.bar{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between}
+.brand{display:flex; align-items:baseline; gap:14px}
+.brand .logo{font-size:1.8rem}
+.tag{color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums}
+.actions{display:flex; flex-wrap:wrap; gap:8px}
+.actions .btn{padding:7px 12px; font-size:.88rem}
+.callout{margin:14px 0 12px; min-height:58px; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:center; text-align:center}
+.callout .msg{font-size:1.15rem; font-weight:600; text-wrap:balance; max-width:60ch}
+.callout .msg em{font-style:normal; color:var(--gold)}
+.callout .sub{color:var(--muted); font-size:.9rem; width:100%}
+.board-wrap{flex:1; min-height:0; display:grid; place-items:center}
+.board{display:grid; --cs:100px}
+.cell{border:4px solid var(--bg); position:relative; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:4px; overflow:hidden; cursor:pointer; transition:opacity .2s, filter .2s; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.cell-name{font-family:var(--display); font-weight:800; font-size:calc(var(--cs) * .17); line-height:1.05; max-width:100%; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word}
+.cell-cat{font-size:calc(var(--cs) * .105); font-weight:600; opacity:.9; margin-top:3px; line-height:1.15; max-width:100%; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
+.cell-n{position:absolute; right:6px; bottom:4px; font-family:var(--mono); font-size:calc(var(--cs) * .09); opacity:.8}
+.cell.dim{opacity:.28; filter:saturate(.5)}
+.cell.chal{box-shadow:inset 0 0 0 4px var(--gold); filter:brightness(1.12)}
+.cell.target{outline:3px dashed #fff; outline-offset:-10px}
+.cell.target:hover{filter:brightness(1.2)}
+.cell.flash{filter:brightness(1.35); box-shadow:inset 0 0 0 4px #fff}
+
+/* ---------- Duel ---------- */
+.duel-screen{position:relative}
+.duel-head{text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px}
+.duel-cat{font-family:var(--display); font-weight:800; font-size:clamp(1.6rem, 4.5vw, 2.8rem); margin:0; line-height:1.05; text-wrap:balance}
+.arena{flex:1; min-height:0; display:grid; grid-template-columns:minmax(150px,1fr) minmax(0,2.6fr) minmax(150px,1fr); gap:16px; align-items:stretch; margin:14px 0}
+.pl{background:var(--bg2); border:2px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6px; text-align:center; transition:border-color .2s, box-shadow .2s, opacity .2s; opacity:.55; min-width:0}
+.pl.on{opacity:1; border-color:var(--c); box-shadow:0 0 0 4px color-mix(in srgb, var(--c) 35%, transparent), 0 0 60px color-mix(in srgb, var(--c) 30%, transparent)}
+.pl-role{font-size:.72rem; text-transform:uppercase; letter-spacing:.14em; font-weight:700; color:var(--muted)}
+.pl-name{font-family:var(--display); font-weight:800; font-size:clamp(1.2rem, 2.6vw, 2rem); line-height:1.05; color:var(--c); filter:brightness(1.35); word-break:break-word}
+.clock{font-family:var(--mono); font-weight:700; font-size:clamp(2.4rem, 6vw, 4.6rem); font-variant-numeric:tabular-nums; line-height:1}
+.clock.low{color:var(--bad); animation:pulse .5s ease-in-out infinite alternate}
+@keyframes pulse{to{opacity:.55}}
+.tbar{width:100%; height:8px; border-radius:99px; background:var(--bg); overflow:hidden}
+.tbar i{display:block; height:100%; background:var(--c); border-radius:99px}
+.stage{background:var(--bg2); border:1px solid var(--line); border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:18px; text-align:center; min-width:0; min-height:0; overflow:hidden; position:relative}
+.turn{position:absolute; top:12px; left:0; right:0; font-weight:700; font-size:.95rem}
+.prompt{color:var(--muted); font-weight:600; font-size:clamp(1rem, 2.2vw, 1.4rem)}
+.clue{font-weight:800; line-height:1.1; max-width:100%; overflow-wrap:anywhere; text-wrap:balance}
+.clue.emoji{font-family:var(--emoji); font-size:clamp(64px, 15vmin, 190px); line-height:1.15}
+.clue.text{font-family:var(--display); font-size:clamp(34px, 8vmin, 104px)}
+.clue.count{font-family:var(--emoji); font-size:clamp(30px, 6.4vmin, 70px); letter-spacing:.12em; line-height:1.3; max-width:18ch}
+.clue.passing{opacity:.25}
+.reveal{min-height:1.4em; font-family:var(--display); font-weight:800; font-size:clamp(1.4rem, 4vw, 2.6rem); color:var(--gold)}
+.reveal.host{font-family:var(--body); font-weight:600; font-size:1rem; color:var(--muted)}
+.last{position:absolute; bottom:12px; left:0; right:0; color:var(--muted); font-size:.95rem}
+.last b{color:var(--good)}
+.controls{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
+.overlay{position:absolute; inset:0; background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(6px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:24px; z-index:5}
+.overlay h2{font-family:var(--display); font-weight:800; font-size:clamp(1.8rem, 5vw, 3.4rem); margin:0; line-height:1.05; text-wrap:balance}
+.overlay p{margin:0; color:var(--muted); font-size:1.1rem}
+.cd{font-family:var(--display); font-weight:800; font-size:clamp(6rem, 22vmin, 14rem); color:var(--gold); line-height:1}
+.who{color:#fff; border:0}
+@media (max-width:760px){
+  .arena{grid-template-columns:1fr 1fr; grid-template-rows:auto minmax(0,1fr); gap:10px}
+  .stage{grid-column:1 / -1; grid-row:2}
+  .pl{padding:10px}
+  .controls .btn.ghost{padding:7px 10px; font-size:.85rem}
+  kbd{display:none}
+}
+
+/* ---------- Champion ---------- */
+.champ{position:relative; align-items:center; justify-content:center; text-align:center}
+.champ canvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none}
+.champ-inner{position:relative; display:flex; flex-direction:column; align-items:center; gap:14px}
+.champ h1{font-family:var(--display); font-weight:800; font-size:clamp(3rem, 12vw, 8rem); margin:0; line-height:.95; color:var(--c); filter:brightness(1.3); text-wrap:balance}
+.champ p{margin:0; font-size:1.3rem; color:var(--muted)}
+/* ---------- Photo categories ---------- */
+.tabs{display:flex; gap:4px; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:4px; margin-bottom:12px}
+.tab{flex:1; background:transparent; border:0; color:var(--muted); font-weight:600; padding:7px 10px; border-radius:7px}
+.tab[aria-selected="true"]{background:var(--panel); color:var(--fg)}
+.drop{display:flex; flex-direction:column; align-items:center; gap:4px; border:2px dashed var(--line); border-radius:12px; padding:18px 12px; text-align:center; color:var(--muted); cursor:pointer; font-size:.9rem}
+.drop.over,.drop:hover{border-color:var(--gold); color:var(--fg)}
+.drop strong{color:var(--gold); font-size:1rem}
+.drop input{display:none}
+.pgrid{display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; margin-top:10px; max-height:440px; overflow-y:auto}
+.pgrid:empty{display:none}
+.ph{position:relative; display:flex; flex-direction:column; gap:4px; min-width:0}
+.ph img{width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; background:var(--bg); display:block}
+.ph input{padding:5px 7px; font-size:.82rem}
+.ph input.missing{border-color:var(--warn)}
+.ph .x{position:absolute; top:4px; right:4px; width:26px; height:26px; background:rgba(0,0,0,.65); border:0; color:#fff; font-size:.95rem; line-height:1; padding:0}
+.busy{grid-column:1 / -1; color:var(--muted); font-size:.85rem}
+.custom-item .row{flex-wrap:nowrap; gap:6px}
+.custom-item .btn{padding:4px 10px; font-size:.82rem}
+.stage.has-photo{padding-block:42px 38px}
+.clue.photo{flex:1; min-height:0; width:100%; position:relative}
+.clue.photo img{position:absolute; inset:0; margin:auto; max-width:100%; max-height:100%; object-fit:contain; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.45)}
+.clue.photo.passing{opacity:.35}
+.clue.photo .missing-ph{position:absolute; inset:0; display:grid; place-items:center; font-size:1.2rem; color:var(--muted)}
+.clue.state{flex:1; min-height:0; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px}
+.clue.state svg{flex:1; min-height:0; width:100%; max-height:52vh; overflow:visible}
+.clue.state path{fill:var(--gold); stroke:#fff; stroke-width:2; vector-effect:non-scaling-stroke; stroke-linejoin:round; filter:drop-shadow(0 6px 18px rgba(0,0,0,.45))}
+.clue.state .state-name{font-family:var(--display); font-weight:800; font-size:clamp(30px, 6.5vmin, 76px); line-height:1}
+.clue.state.passing{opacity:.35}
+.clue.world{flex:1; min-height:0; width:100%; position:relative}
+.clue.world svg{position:absolute; inset:0; width:100%; height:100%; background:var(--sea); border-radius:14px}
+.clue.world path{fill:var(--land); stroke:var(--bg2); stroke-width:1; vector-effect:non-scaling-stroke}
+.clue.world path.hit{fill:var(--gold); stroke:#fff; stroke-width:2}
+.clue.world.passing{opacity:.35}
+/* ---------- Phone remote ---------- */
+.modal{position:fixed; inset:0; z-index:20; background:color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter:blur(6px); display:grid; place-items:center; padding:24px}
+.modal-card{background:var(--bg2); border:1px solid var(--line); border-radius:18px; padding:24px; max-width:420px; width:100%; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center}
+.modal-card h2{font-family:var(--display); font-weight:800; margin:0; font-size:1.6rem; text-wrap:balance}
+.qr{background:#fff; padding:10px; border-radius:12px; line-height:0}
+.qr svg{width:220px; height:220px}
+.code{font-family:var(--mono); font-size:1.8rem; font-weight:700; letter-spacing:.2em; color:var(--gold)}
+.url{font-family:var(--mono); font-size:.78rem; color:var(--muted); word-break:break-all}
+.dot{display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--muted); margin-right:6px}
+.dot.on{background:var(--good)}
+.btn.on-remote{border-color:var(--good); color:var(--good)}
+.remote{height:100%; display:flex; flex-direction:column; gap:10px; padding-left:max(14px, env(safe-area-inset-left, 0px)); padding-right:max(14px, env(safe-area-inset-right, 0px)); padding-block:10px; overflow:hidden}
+.r-head{display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:.85rem; color:var(--muted)}
+.r-head .logo{font-size:1.15rem; color:var(--fg)}
+.r-main{flex:1; min-height:0; display:flex; flex-direction:column; gap:10px; overflow-y:auto}
+.r-msg{font-size:1.1rem; font-weight:600; text-align:center; text-wrap:balance}
+.r-msg em{font-style:normal; color:var(--gold)}
+.r-sub{color:var(--muted); font-size:.85rem; text-align:center}
+.r-btn{width:100%; border-radius:14px; padding:16px; font-weight:700; font-size:1.1rem; color:var(--fg); background:var(--panel); border:1px solid var(--line); touch-action:manipulation}
+.r-btn:active{transform:scale(.98)}
+.r-btn.gold{background:var(--gold); color:#2a1d00; border-color:var(--gold)}
+.r-btn.good{background:var(--good); color:#062417; border-color:var(--good); font-size:1.6rem; padding:24px}
+.r-btn.warn{background:transparent; color:var(--warn); border:2px solid var(--warn)}
+.r-btn.who{color:#fff; border:0; font-size:1.3rem; padding:20px}
+.r-chips{display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px}
+.r-chip{border:0; border-radius:12px; padding:12px 10px; color:#fff; font-weight:700; font-size:1rem; text-align:left; text-shadow:0 1px 2px rgba(0,0,0,.4); display:flex; flex-direction:column; gap:2px; min-width:0; touch-action:manipulation}
+.r-chip small{font-weight:500; opacity:.92; font-size:.75rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.r-chip.flash{outline:3px solid #fff}
+.r-label{font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700; text-align:center}
+.r-players{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.r-pl{border:2px solid var(--line); border-radius:12px; padding:8px 10px; opacity:.55; min-width:0; text-align:center}
+.r-pl.on{opacity:1; border-color:var(--c); box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent)}
+.r-pl b{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.r-clk{font-family:var(--mono); font-weight:700; font-size:2rem; font-variant-numeric:tabular-nums; line-height:1.1}
+.r-clk.low{color:var(--bad)}
+.r-card{background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:10px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; flex:1; min-height:170px}
+.r-clue{flex:1; min-height:110px; width:100%; position:relative}
+.r-clue img{position:absolute; inset:0; margin:auto; max-width:100%; max-height:100%; object-fit:contain; border-radius:8px}
+.r-clue svg{position:absolute; inset:0; width:100%; height:100%; border-radius:8px}
+.r-clue.world svg{background:var(--sea)}
+.r-clue path{fill:var(--land); stroke:var(--bg2); stroke-width:1; vector-effect:non-scaling-stroke}
+.r-clue path.hit, .r-clue.state path{fill:var(--gold)}
+.r-txt{position:absolute; inset:0; display:grid; place-items:center; font-family:var(--display); font-weight:800; font-size:1.7rem; line-height:1.1; overflow-wrap:anywhere; padding:4px}
+.r-txt.emoji, .r-txt.count{font-family:var(--emoji); font-size:2.6rem}
+.r-txt.count{font-size:1.5rem; letter-spacing:.1em}
+.r-ans{font-family:var(--display); font-weight:800; font-size:clamp(1.7rem, 9vw, 2.6rem); color:var(--gold); line-height:1.05; text-wrap:balance}
+.r-actions{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding-bottom:env(safe-area-inset-bottom, 0px)}
+.r-actions .good{grid-column:1 / -1}
+.r-actions .r-btn{padding:14px 8px; font-size:1rem}
+.r-actions .r-btn.good{font-size:1.6rem; padding:24px}
+.r-cd{font-family:var(--display); font-weight:800; font-size:7rem; color:var(--gold); text-align:center; line-height:1}
+@media (prefers-reduced-motion:reduce){ .clock.low{animation:none} *{transition:none!important} }
+/* ---------- Retro arcade theme (Tetris / Galaga) ---------- */
+:root{
+  --bg:#05050f; --bg2:#0c0c22; --panel:#15153c; --line:#2e2e74;
+  --fg:#f2f2ff; --muted:#9090cc;
+  --gold:#ffd400; --good:#2bff88; --warn:#ff8a00; --bad:#ff3355;
+  --cyan:#00e5ff; --pink:#ff3df2;
+  --sea:#06122a; --land:#2b2b68;
+  --display:"Press Start 2P","Courier New",monospace;
+  --body:"Pixelify Sans","Trebuchet MS",system-ui,sans-serif;
+  --mono:"Press Start 2P","Courier New",monospace;
+}
+body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(1.5px 1.5px at 40px 60px, #ffffff70, transparent),
+    radial-gradient(2px 2px at 260px 180px, #9fe8ff60, transparent),
+    radial-gradient(1.5px 1.5px at 420px 320px, #ffffff55, transparent),
+    radial-gradient(2px 2px at 150px 430px, #ffb3f750, transparent);
+  background-size:520px 520px;
+  font-size:17px;
+  animation:starfield 70s linear infinite;
+}
+@keyframes starfield{to{background-position:0 520px}}
+.btn{border-radius:0; font-family:var(--display); font-size:.66rem; text-transform:uppercase; letter-spacing:.03em; padding:12px 14px; border:2px solid var(--line); box-shadow:4px 4px 0 #000; background:var(--panel); line-height:1.4}
+.btn:hover{border-color:var(--cyan); color:var(--cyan)}
+.btn:active{transform:translate(2px,2px); box-shadow:2px 2px 0 #000}
+.btn.big{font-size:.82rem; padding:16px 22px; border-radius:0}
+.btn.gold{background:var(--gold); color:#1a1400; border-color:#fff3a0}
+.btn.gold:hover{color:#1a1400; border-color:#fff}
+.btn.good{border-color:#b8ffd6}
+.btn.good:hover{color:#062417; border-color:#fff}
+.btn.warn:hover{color:var(--warn); border-color:#ffc27a}
+.btn.ghost{background:var(--bg2)}
+.actions .btn{font-size:.58rem; padding:9px 11px}
+kbd{font-family:var(--body); font-size:.95em; border-radius:0}
+input,select,textarea{border-radius:0; border:2px solid var(--line); font-size:1.05rem; background:#07071a}
+input,select,textarea{box-sizing:border-box; max-width:100%}
+#rStat{min-width:0; text-align:right; font-size:.8rem; line-height:1.3}
+.r-head{align-items:flex-start}
+textarea{font-family:var(--body)}
+.card{border-radius:0; border:2px solid var(--line); box-shadow:6px 6px 0 #000; background:var(--bg2)}
+.card h2{font-size:.8rem; text-transform:uppercase; color:var(--cyan); line-height:1.5}
+.card .hint, .hint{font-size:1rem}
+.pill{border-radius:0; font-family:var(--display); font-size:.5rem; padding:4px 7px; color:var(--gold); border-color:var(--gold)}
+.eyebrow, .pl-role, .r-label{font-family:var(--display); font-size:.55rem; letter-spacing:.06em; color:var(--pink); line-height:1.6}
+.logo{font-family:var(--display); text-transform:uppercase; color:var(--gold); text-shadow:3px 3px 0 var(--pink), 6px 6px 0 #000; letter-spacing:0}
+.logo b{color:var(--cyan)}
+.hero .logo{font-size:clamp(1.6rem, 6vw, 3.2rem); line-height:1.25}
+.hero p{font-size:1.15rem}
+.brand .logo{font-size:1.05rem}
+.tag{font-family:var(--display); font-size:.58rem}
+.callout .msg{font-size:1.35rem}
+.callout .msg em{color:var(--gold)}
+.rules ol{font-size:1.02rem}
+.rules b{color:var(--gold)}
+.cell{border-width:3px}
+.cell::before{content:""; position:absolute; inset:0; pointer-events:none; box-shadow:inset 5px 5px 0 rgba(255,255,255,.3), inset -5px -5px 0 rgba(0,0,0,.35)}
+.cell-name{font-family:var(--display); font-size:calc(var(--cs) * .095); line-height:1.35; text-transform:uppercase}
+.cell-cat{font-family:var(--body); font-weight:600; font-size:calc(var(--cs) * .115)}
+.cell-n{font-family:var(--display); font-size:calc(var(--cs) * .07)}
+.cell.chal{box-shadow:inset 0 0 0 5px var(--gold); animation:blink .7s steps(2) infinite}
+@keyframes blink{50%{filter:brightness(1.55)}}
+.cell.target{outline:3px dashed #fff; outline-offset:-12px}
+.duel-cat{font-size:clamp(1rem, 3vw, 1.8rem); text-transform:uppercase; color:var(--gold); text-shadow:3px 3px 0 #000; line-height:1.35}
+.pl, .stage{border-radius:0; border-width:3px; box-shadow:6px 6px 0 #000}
+.pl.on{box-shadow:0 0 0 4px var(--c), 8px 8px 0 #000}
+.pl-name{font-family:var(--display); font-size:clamp(.72rem, 1.5vw, 1.05rem); line-height:1.45; text-transform:uppercase}
+.clock{font-family:var(--display); font-size:clamp(1.7rem, 4.4vw, 3.4rem)}
+.tbar{border-radius:0; height:14px; border:2px solid var(--line)}
+.tbar i{border-radius:0}
+.turn{font-family:var(--display); font-size:.62rem; line-height:1.6}
+.prompt{font-size:clamp(1.1rem, 2.4vw, 1.5rem)}
+.clue.text{font-family:var(--display); font-size:clamp(18px, 4.2vmin, 52px); line-height:1.45}
+.clue.state .state-name{font-size:clamp(16px, 3.6vmin, 40px); text-transform:uppercase}
+.reveal{font-family:var(--display); font-size:clamp(.95rem, 2.4vw, 1.6rem); line-height:1.4}
+.last{font-size:1.05rem}
+.clue.photo img, .clue.world svg{border-radius:0; border:3px solid var(--line); box-shadow:6px 6px 0 #000}
+.overlay h2, .champ h1{font-family:var(--display); text-transform:uppercase; line-height:1.35}
+.overlay h2{font-size:clamp(1rem, 3.2vw, 2.1rem)}
+.overlay p{font-size:1.2rem}
+.cd{font-size:clamp(4rem, 16vmin, 9rem); text-shadow:6px 6px 0 var(--pink)}
+.champ h1{font-size:clamp(1.6rem, 6.5vw, 4.4rem); text-shadow:5px 5px 0 #000}
+.champ p{font-family:var(--display); font-size:.8rem; line-height:1.6}
+.ph img, .swatch, .custom-item, .tabs, .tab, .drop, .x, .qr, .ph .x{border-radius:0}
+.tab{font-family:var(--display); font-size:.55rem}
+.modal-card{border-radius:0; border:3px solid var(--line); box-shadow:8px 8px 0 #000}
+.modal-card h2{font-size:.95rem; text-transform:uppercase; line-height:1.5; color:var(--gold)}
+.code{font-family:var(--display); font-size:1.4rem; color:var(--cyan)}
+.r-btn, .r-chip, .r-card, .r-pl, .r-clue img, .r-clue svg{border-radius:0}
+.r-btn{font-family:var(--display); font-size:.75rem; line-height:1.4; text-transform:uppercase; box-shadow:4px 4px 0 #000; border-width:2px}
+.r-btn:active{transform:translate(2px,2px); box-shadow:2px 2px 0 #000}
+.r-actions .r-btn{font-size:.62rem}
+.r-btn.good, .r-actions .r-btn.good{font-size:1.25rem}
+.r-btn.who{font-size:.9rem}
+.r-chip{font-family:var(--display); font-size:.62rem; line-height:1.5; box-shadow:3px 3px 0 #000; text-transform:uppercase}
+.r-chip small{font-family:var(--body); font-size:.85rem; text-transform:none}
+.r-pl.on{box-shadow:0 0 0 3px var(--c), 4px 4px 0 #000}
+.r-pl b{font-family:var(--display); font-size:.6rem; line-height:1.6}
+.r-clk{font-family:var(--display); font-size:1.35rem; line-height:1.4}
+.r-ans{font-family:var(--display); font-size:clamp(1.05rem, 6vw, 1.6rem); line-height:1.4; text-shadow:3px 3px 0 #000}
+.r-msg{font-size:1.25rem}
+.r-txt{font-family:var(--display); font-size:1rem; line-height:1.5}
+.r-cd{font-family:var(--display); font-size:5rem; text-shadow:5px 5px 0 var(--pink)}
+.r-card{box-shadow:5px 5px 0 #000; border-width:2px}
+.r-head .logo{font-size:.85rem}
+@media (prefers-reduced-motion:reduce){ body{animation:none} .cell.chal{animation:none} }
+.prow{grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) 34px}
+.seat{height:34px; display:grid; place-items:center; font-family:var(--display); font-size:.6rem; color:#fff; text-shadow:1px 1px 0 #000}
+.prow.up select{outline:3px solid var(--gold); outline-offset:1px}
+.prow.up .seat{animation:blink .7s steps(2) infinite}
+.next-pick{margin:0 0 12px; font-size:1.1rem}
+.next-pick b{color:var(--gold)}
+@media (prefers-reduced-motion:reduce){ .prow.up .seat{animation:none} }
+.r-actions{grid-template-columns:1fr 1fr}
+.r-actions .r-btn.good, .r-actions .r-btn.warn{grid-column:1 / -1; font-size:1.25rem; padding:22px 8px}
+.r-actions .r-btn.warn{background:var(--warn); color:#1f1000; border:2px solid #ffc27a}
+.r-card{min-height:0}
+.r-clue{min-height:90px}
+.screen, .remote{box-sizing:border-box}
+body.nocursor, body.nocursor *{cursor:none !important}
+html.tv #app{zoom:var(--tvz); width:calc(100vw / var(--tvz)); height:calc(100vh / var(--tvz))}
+.pl{container-type:inline-size}
+.clock{font-size:clamp(1.3rem, 21cqi, 4.4rem)}
+.pl-name{font-size:clamp(.65rem, 8cqi, 1.3rem)}
+.prompt{font-size:1.35rem}
+.reveal{font-size:1.4rem}
+.clue.text{font-size:clamp(1.1rem, 4.2vmin, 3.2rem)}
+.duel-cat{font-size:clamp(1rem, 3vmin, 1.8rem)}
+html.tv .stage.has-photo{padding-block:30px 24px}
+html.tv .stage{gap:6px}
+html.tv .reveal:empty{display:none}
+html.tv .reveal{min-height:0}
+body.has-remote .duel-screen .controls{display:none}
+.hero, .setup-grid, .startbar{max-width:1500px}
+</style>
+
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+/* ================= Clue packs ================= */
+const P = s => s.trim().split('\n').map(l => l.trim()).filter(Boolean).map(l => { const i = l.indexOf('|'); return i < 0 ? [l, ''] : [l.slice(0, i).trim(), l.slice(i + 1).trim()]; });
+
+const PARTY = [
+ {id:'actors', name:'Actors (text)', style:'text', prompt:'Who played…', items:P(`
+Jack in Titanic|Leonardo DiCaprio
+Forrest Gump|Tom Hanks
+Iron Man|Robert Downey Jr.
+Wolverine|Hugh Jackman
+Katniss Everdeen|Jennifer Lawrence
+Hermione Granger|Emma Watson
+Captain Jack Sparrow|Johnny Depp
+Neo in The Matrix|Keanu Reeves
+Wonder Woman (2017)|Gal Gadot
+Black Widow|Scarlett Johansson
+Barbie (2023)|Margot Robbie
+Ken (2023)|Ryan Gosling
+Elphaba in Wicked|Cynthia Erivo
+Glinda in Wicked|Ariana Grande
+Captain America|Chris Evans
+Thor|Chris Hemsworth
+Rocky Balboa|Sylvester Stallone
+The Terminator|Arnold Schwarzenegger
+Ethan Hunt in Mission: Impossible|Tom Cruise
+Han Solo and Indiana Jones|Harrison Ford
+Mrs. Doubtfire|Robin Williams
+Spider-Man in Homecoming|Tom Holland
+Wednesday Addams on Netflix|Jenna Ortega
+Black Panther|Chadwick Boseman
+Ace Ventura|Jim Carrey
+Mia in La La Land|Emma Stone
+Miranda Priestly in The Devil Wears Prada|Meryl Streep
+Elle Woods in Legally Blonde|Reese Witherspoon
+Buddy the Elf|Will Ferrell
+The Fresh Prince of Bel-Air|Will Smith
+Paul Atreides in Dune|Timothée Chalamet
+Dom Toretto in Fast & Furious|Vin Diesel
+Michael Scott in The Office|Steve Carell
+Rachel Green on Friends|Jennifer Aniston
+Hannah Montana|Miley Cyrus
+Austin Powers|Mike Myers
+Jason Bourne|Matt Damon
+Deadpool|Ryan Reynolds`)},
+ {id:'mammals', name:'Mammals (emoji)', style:'emoji', prompt:'Name the mammal', items:P(`
+🐘|Elephant
+🦒|Giraffe
+🦓|Zebra
+🦘|Kangaroo
+🦔|Hedgehog
+🦦|Otter
+🦥|Sloth
+🦛|Hippo
+🦏|Rhino
+🐫|Camel
+🦙|Llama
+🦡|Badger
+🦨|Skunk
+🦫|Beaver
+🦇|Bat
+🐻|Bear
+🐻‍❄️|Polar bear
+🐼|Panda
+🐨|Koala
+🦊|Fox
+🐺|Wolf
+🦝|Raccoon
+🐿️|Chipmunk
+🦌|Deer
+🦬|Bison
+🐆|Leopard
+🐅|Tiger
+🦁|Lion
+🦍|Gorilla
+🦧|Orangutan
+🐒|Monkey
+🐹|Hamster
+🐇|Rabbit
+🐁|Mouse
+🐖|Pig
+🐄|Cow
+🐎|Horse
+🐐|Goat
+🐑|Sheep
+🐳|Whale`)},
+ {id:'disney', name:'Disney Characters (text)', style:'text', prompt:'Which Disney character?', items:P(`
+Lost a glass slipper at the ball|Cinderella
+Super-long magic hair, lived in a tower|Rapunzel
+Ice powers, sings "Let It Go"|Elsa
+Snowman who likes warm hugs|Olaf
+Mermaid who wants legs|Ariel
+Lion cub who will be king|Simba
+Wooden boy whose nose grows|Pinocchio
+Baby elephant with giant ears|Dumbo
+Fairy who travels with Peter Pan|Tinker Bell
+Villain who wants a puppy-fur coat|Cruella de Vil
+Sea witch who steals Ariel's voice|Ursula
+Big blue wish-granter in a lamp|Genie
+Fell asleep after touching a spindle|Aurora
+Bit the poisoned apple|Snow White
+Honey-loving bear|Winnie the Pooh
+Bouncy striped tiger|Tigger
+Gloomy gray donkey|Eeyore
+Mouse in red shorts|Mickey Mouse
+Duck in a sailor shirt|Donald Duck
+Wayfinder from Motunui|Moana
+Demigod with a magic fishhook|Maui
+"Hakuna Matata" warthog|Pumbaa
+Fought in the army disguised as a man|Mulan
+"To infinity and beyond!"|Buzz Lightyear
+Cowboy sheriff toy|Woody
+Forgetful blue fish|Dory
+Big blue furry monster at Monsters, Inc.|Sulley
+One-eyed green monster|Mike Wazowski
+Blue alien, Experiment 626|Stitch
+Race car who says "Ka-chow!"|Lightning McQueen
+Bookworm who falls for the Beast|Belle
+Talking candlestick|Lumiere
+"We don't talk about ___"|Bruno
+Waitress who kissed a frog in New Orleans|Tiana
+Joy's teammate who makes everyone blue|Sadness
+Street rat with a flying carpet|Aladdin
+Lion cub's evil uncle|Scar
+Wears a red cape and a tiara: "the Incredible" mom|Elastigirl`)},
+ {id:'athletes', name:'Athletes (text)', style:'text', prompt:'Name the athlete', items:P(`
+Most Olympic gold medals ever (swimming)|Michael Phelps
+Chicago Bulls legend, "Air"|Michael Jordan
+"King James" of the NBA|LeBron James
+Quarterback with 7 Super Bowl wins|Tom Brady
+Fastest man ever, "Lightning"|Usain Bolt
+Argentina's 2022 World Cup captain|Lionel Messi
+Portuguese soccer star "CR7"|Cristiano Ronaldo
+Golfer nicknamed "Tiger"|Tiger Woods
+23 Grand Slam singles titles|Serena Williams
+Most decorated gymnast in history|Simone Biles
+"The Great One" of hockey|Wayne Gretzky
+"Float like a butterfly, sting like a bee"|Muhammad Ali
+Chiefs QB with 3 Super Bowl rings|Patrick Mahomes
+Warriors sharpshooter, #30|Stephen Curry
+Lakers' "Black Mamba"|Kobe Bryant
+Broke baseball's color barrier in 1947|Jackie Robinson
+Yankees slugger "The Bambino"|Babe Ruth
+Dodgers two-way star from Japan|Shohei Ohtani
+College scoring record holder from Iowa|Caitlin Clark
+Skateboarder who landed the first 900|Tony Hawk
+Snowboarder "The Flying Tomato"|Shaun White
+Serbian tennis star "Nole"|Novak Djokovic
+Swiss tennis great with 20 Slams|Roger Federer
+Spain's "King of Clay"|Rafael Nadal
+Brazilian legend with 3 World Cups|Pelé
+NBA giant known as "Shaq"|Shaquille O'Neal
+Chiefs tight end engaged to Taylor Swift|Travis Kelce
+Yankees home run king, #99|Aaron Judge
+NFL's "Prime Time"|Deion Sanders
+"The Greek Freak"|Giannis Antetokounmpo
+Won 4 golds at the 1936 Berlin Olympics|Jesse Owens
+Undefeated boxer known as "Money"|Floyd Mayweather
+Swimmer with 9 Olympic golds, distance queen|Katie Ledecky
+Slovenian NBA star traded to the Lakers|Luka Dončić`)},
+ {id:'produce', name:'Fruits & Veggies (emoji)', style:'emoji', prompt:'Name it', items:P(`
+🍎|Apple
+🍐|Pear
+🍊|Orange
+🍋|Lemon
+🍌|Banana
+🍉|Watermelon
+🍇|Grapes
+🍓|Strawberry
+🫐|Blueberries
+🍈|Cantaloupe
+🍒|Cherries
+🍑|Peach
+🥭|Mango
+🍍|Pineapple
+🥥|Coconut
+🥝|Kiwi
+🍅|Tomato
+🍆|Eggplant
+🥑|Avocado
+🥦|Broccoli
+🥬|Lettuce
+🥒|Cucumber
+🌶️|Chili pepper
+🫑|Bell pepper
+🌽|Corn
+🥕|Carrot
+🧄|Garlic
+🧅|Onion
+🥔|Potato
+🍠|Sweet potato
+🍄|Mushroom
+🫒|Olive
+🥜|Peanuts`)},
+ {id:'kitchen', name:'Kitchen Items (emoji)', style:'auto', prompt:'Name the kitchen item', items:P(`
+🍳|Frying pan
+🥄|Spoon
+🔪|Knife
+🥢|Chopsticks
+🫖|Teapot
+☕|Mug
+🥣|Bowl
+🍽️|Plate
+🧂|Salt shaker
+🫙|Jar
+🧽|Sponge
+🧻|Paper towels
+🍷|Wine glass
+Makes bread crispy|Toaster
+Spins fruit into smoothies|Blender
+Heats leftovers in 30 seconds|Microwave
+Flips pancakes|Spatula
+Shreds cheese|Grater
+Drains pasta|Colander
+Opens soup cans|Can opener
+Flattens dough|Rolling pin
+Beats eggs|Whisk
+Whistles when the water boils|Kettle
+Crushes garlic cloves|Garlic press
+Scoops soup into bowls|Ladle
+Keeps the milk cold|Refrigerator
+Washes the dishes for you|Dishwasher
+Cookies bake on it|Baking sheet
+Peels potatoes|Peeler
+Grabs hot food off the grill|Tongs
+Protects your hand from a hot pan|Oven mitt
+Times the eggs|Kitchen timer
+Cuts pizza into slices|Pizza cutter`)},
+ {id:'logos', name:'Logos (text)', style:'text', prompt:'Whose logo is this?', items:P(`
+Golden arches|McDonald's
+An apple with a bite out of it|Apple
+A swoosh|Nike
+Green mermaid with two tails|Starbucks
+Red bullseye|Target
+Three slanted stripes|Adidas
+Leaping cat|Puma
+Yellow-and-red seashell|Shell
+Arrow smiling from A to Z|Amazon
+Prancing black horse|Ferrari
+Charging gold bull|Lamborghini
+Three-pointed star in a circle|Mercedes-Benz
+Four linked rings|Audi
+Blue-and-white circle in quarters|BMW
+Gold bowtie|Chevrolet
+Three overlapping ovals|Toyota
+Bearded colonel's face|KFC
+Red-haired girl with pigtails|Wendy's
+Castle with a shooting-star arc|Disney
+Peacock with six colorful feathers|NBC
+Red rectangle with a white play button|YouTube
+White ghost on yellow|Snapchat
+White lowercase "f" on blue|Facebook
+Purple bell|Taco Bell
+Girl with an umbrella: "When it rains it pours"|Morton Salt
+Red-and-white swirly cursive|Coca-Cola
+Red, white, and blue circle with a wave|Pepsi
+Little green crocodile|Lacoste
+Polo player on a horse|Ralph Lauren
+Man made of white tires|Michelin
+Roaring lion before movies|MGM
+Snowy mountain peak circled by stars|Paramount
+Rainbow-colored camera outline|Instagram
+Blue bird (before it became an X)|Twitter
+Five interlocking colored rings|Olympics`)},
+ {id:'ocean', name:'Ocean Animals (emoji)', style:'auto', prompt:'Name the sea creature', items:P(`
+🐙|Octopus
+🦑|Squid
+🦀|Crab
+🦞|Lobster
+🦐|Shrimp
+🐬|Dolphin
+🦈|Shark
+🐢|Sea turtle
+🦭|Seal
+🐡|Pufferfish
+🦪|Oyster
+🐳|Whale
+Whale with a tusk like a unicorn horn|Narwhal
+Five arms, can regrow one|Starfish
+Floating blob with stingers and no brain|Jellyfish
+Flat fish with a whip-like tail|Stingray
+The dads carry the babies|Seahorse
+Black-and-white "killer whale"|Orca
+Gentle "sea cow"|Manatee
+Spiny ball on the sea floor|Sea urchin
+Giant tusks, naps on Arctic ice|Walrus
+Orange-and-white fish living in an anemone|Clownfish
+Largest animal that ever lived|Blue whale
+Snake-like fish that can be electric|Eel
+Shark with a hammer-shaped head|Hammerhead shark
+Floats on its back, cracks shells with rocks|Sea otter
+Fish that swims upstream to spawn|Salmon
+Tiny shrimp-like food for whales|Krill
+Fish that glides above the waves|Flying fish
+Biggest fish in the sea|Whale shark
+Eight arms, three hearts, blue blood|Octopus`)},
+ {id:'songs', name:'Finish the Song Title', style:'text', prompt:'Finish the song title', items:P(`
+Rolling in the ___ (Adele, 2011)|Deep
+Shake It ___ (Taylor Swift, 2014)|Off
+Uptown ___ (Mark Ronson ft. Bruno Mars, 2014)|Funk
+Blinding ___ (The Weeknd, 2019)|Lights
+Shape of ___ (Ed Sheeran, 2017)|You
+Old Town ___ (Lil Nas X, 2019)|Road
+Watermelon ___ (Harry Styles, 2019)|Sugar
+drivers ___ (Olivia Rodrigo, 2021)|license
+good 4 ___ (Olivia Rodrigo, 2021)|u
+Can't Stop the ___ (Justin Timberlake, 2016)|Feeling!
+Single ___ (Beyoncé, 2008)|Ladies
+Party in the ___ (Miley Cyrus, 2009)|U.S.A.
+Wrecking ___ (Miley Cyrus, 2013)|Ball
+Anti-___ (Taylor Swift, 2022)|Hero
+Cruel ___ (Taylor Swift, 2019)|Summer
+Love ___ (Taylor Swift, 2008)|Story
+Poker ___ (Lady Gaga, 2008)|Face
+Bad ___ (Lady Gaga, 2009)|Romance
+Die With a ___ (Lady Gaga & Bruno Mars, 2024)|Smile
+Don't Start ___ (Dua Lipa, 2019)|Now
+Bad ___ (Billie Eilish, 2019)|Guy
+Call Me ___ (Carly Rae Jepsen, 2012)|Maybe
+Somebody That I Used to ___ (Gotye, 2011)|Know
+Hey, Soul ___ (Train, 2009)|Sister
+I Gotta ___ (Black Eyed Peas, 2009)|Feeling
+Teenage ___ (Katy Perry, 2010)|Dream
+California ___ (Katy Perry, 2010)|Gurls
+Thinking Out ___ (Ed Sheeran, 2014)|Loud
+All About That ___ (Meghan Trainor, 2014)|Bass
+See You ___ (Wiz Khalifa ft. Charlie Puth, 2015)|Again
+Hotline ___ (Drake, 2015)|Bling
+Party Rock ___ (LMFAO, 2011)|Anthem
+Moves Like ___ (Maroon 5, 2011)|Jagger
+Just the Way You ___ (Bruno Mars, 2010)|Are
+We Found ___ (Rihanna, 2011)|Love
+As It ___ (Harry Styles, 2022)|Was
+Kill ___ (SZA, 2022)|Bill
+Stay With ___ (Sam Smith, 2014)|Me
+Counting ___ (OneRepublic, 2013)|Stars
+Pumped Up ___ (Foster the People, 2011)|Kicks
+Ho ___ (The Lumineers, 2012)|Hey
+Hips Don't ___ (Shakira, 2006)|Lie
+Gangnam ___ (PSY, 2012)|Style
+A Bar ___ (Tipsy) (Shaboozey, 2024)|Song`)},
+ {id:'statecaps', name:'State Capitals', style:'state', prompt:'Name the capital', items:P(`
+Alabama|Montgomery
+Alaska|Juneau
+Arizona|Phoenix
+Arkansas|Little Rock
+California|Sacramento
+Colorado|Denver
+Connecticut|Hartford
+Delaware|Dover
+Florida|Tallahassee
+Georgia|Atlanta
+Hawaii|Honolulu
+Idaho|Boise
+Illinois|Springfield
+Indiana|Indianapolis
+Iowa|Des Moines
+Kansas|Topeka
+Kentucky|Frankfort
+Louisiana|Baton Rouge
+Maine|Augusta
+Maryland|Annapolis
+Massachusetts|Boston
+Michigan|Lansing
+Minnesota|Saint Paul
+Mississippi|Jackson
+Missouri|Jefferson City
+Montana|Helena
+Nebraska|Lincoln
+Nevada|Carson City
+New Hampshire|Concord
+New Jersey|Trenton
+New Mexico|Santa Fe
+New York|Albany
+North Carolina|Raleigh
+North Dakota|Bismarck
+Ohio|Columbus
+Oklahoma|Oklahoma City
+Oregon|Salem
+Pennsylvania|Harrisburg
+Rhode Island|Providence
+South Carolina|Columbia
+South Dakota|Pierre
+Tennessee|Nashville
+Texas|Austin
+Utah|Salt Lake City
+Vermont|Montpelier
+Virginia|Richmond
+Washington|Olympia
+West Virginia|Charleston
+Wisconsin|Madison
+Wyoming|Cheyenne`)},
+ {id:'stinky', name:'Things That Smell Bad', style:'auto', prompt:'What stinks?', items:P(`
+🦨|Skunk
+🧦|Dirty socks
+🗑️|Garbage
+💩|Poop
+💨|Fart
+🥚🤢|Rotten eggs
+🐟🤢|Old fish
+🧀🤢|Stinky cheese
+🥛🤢|Spoiled milk
+👟💦|Sweaty sneakers
+🍞🦠|Moldy bread
+🐕💧|Wet dog
+🦶|Stinky feet
+🚽|Toilet
+🧅|Onions
+🍿🔥|Burnt popcorn
+🐄💩|Manure
+🚬|Cigarette smoke
+👄☀️|Morning breath
+Spiky fruit banned on some trains in Asia|Durian
+Veggie that makes your pee smell funny|Asparagus
+Where the cat does its business|Litter box
+A baby's full ___|Diaper
+Giant flower that smells like rotting meat|Corpse flower
+Element that smells like rotten eggs|Sulfur
+Outdoor toilet at a music festival|Porta-potty
+Your armpits after a workout|B.O.
+Big metal bin behind a restaurant|Dumpster
+The gym bag you forgot in the car|Gym clothes
+Under the street, where the drains go|Sewer`)},
+ {id:'geography', name:'Geography', style:'world', prompt:'Name the gold country', items:[["Afghanistan", "Afghanistan"], ["Argentina", "Argentina"], ["Australia", "Australia"], ["Austria", "Austria"], ["Brazil", "Brazil"], ["Canada", "Canada"], ["Chile", "Chile"], ["China", "China"], ["Colombia", "Colombia"], ["Croatia", "Croatia"], ["Cuba", "Cuba"], ["Cyprus", "Cyprus"], ["Denmark", "Denmark"], ["Dominican Republic", "Dominican Republic"], ["Ecuador", "Ecuador"], ["Egypt", "Egypt"], ["Ethiopia", "Ethiopia"], ["Finland", "Finland"], ["France", "France"], ["Germany", "Germany"], ["Greece", "Greece"], ["Haiti", "Haiti"], ["Iceland", "Iceland"], ["India", "India"], ["Indonesia", "Indonesia"], ["Iran", "Iran"], ["Ireland", "Ireland"], ["Israel", "Israel"], ["Italy", "Italy"], ["Jamaica", "Jamaica"], ["Japan", "Japan"], ["Kenya", "Kenya"], ["Madagascar", "Madagascar"], ["Malaysia", "Malaysia"], ["Mexico", "Mexico"], ["Mongolia", "Mongolia"], ["Morocco", "Morocco"], ["Nepal", "Nepal"], ["Netherlands", "Netherlands"], ["New Zealand", "New Zealand"], ["Nigeria", "Nigeria"], ["North Korea", "North Korea"], ["Norway", "Norway"], ["Pakistan", "Pakistan"], ["Panama", "Panama"], ["Peru", "Peru"], ["Philippines", "Philippines"], ["Poland", "Poland"], ["Portugal", "Portugal"], ["Russia", "Russia"], ["Saudi Arabia", "Saudi Arabia"], ["Somalia", "Somalia"], ["South Africa", "South Africa"], ["South Korea", "South Korea"], ["Spain", "Spain"], ["Sri Lanka", "Sri Lanka"], ["Sweden", "Sweden"], ["Switzerland", "Switzerland"], ["Taiwan", "Taiwan"], ["Thailand", "Thailand"], ["Turkey", "Turkey"], ["Ukraine", "Ukraine"], ["United Kingdom", "United Kingdom"], ["Venezuela", "Venezuela"], ["Vietnam", "Vietnam"]]},
+];
+const BUILTIN = [
+ ...PARTY,
+ {id:'flags', name:'Flags', style:'emoji', prompt:'Which country?', items:P(`
+🇫🇷|France
+🇯🇵|Japan
+🇧🇷|Brazil
+🇨🇦|Canada
+🇩🇪|Germany
+🇮🇹|Italy
+🇲🇽|Mexico
+🇬🇧|United Kingdom
+🇪🇸|Spain
+🇨🇳|China
+🇮🇳|India
+🇰🇷|South Korea
+🇦🇺|Australia
+🇸🇪|Sweden
+🇳🇴|Norway
+🇬🇷|Greece
+🇮🇪|Ireland
+🇳🇱|Netherlands
+🇨🇭|Switzerland
+🇦🇷|Argentina
+🇯🇲|Jamaica
+🇹🇷|Turkey
+🇵🇹|Portugal
+🇿🇦|South Africa
+🇪🇬|Egypt
+🇳🇬|Nigeria
+🇵🇱|Poland
+🇺🇦|Ukraine
+🇫🇮|Finland
+🇩🇰|Denmark
+🇨🇺|Cuba
+🇮🇱|Israel
+🇳🇿|New Zealand
+🇰🇪|Kenya
+🇻🇳|Vietnam
+🇨🇴|Colombia
+🇧🇪|Belgium
+🇦🇹|Austria
+🇵🇭|Philippines
+🇹🇭|Thailand`)},
+ {id:'movies', name:'Emoji Movies', style:'emoji', prompt:'Name the movie', items:P(`
+🦁👑|The Lion King
+🕷️🧑|Spider-Man
+❄️👸⛄|Frozen
+🦈🏖️|Jaws
+🧸🤠🚀|Toy Story
+🐠🔍|Finding Nemo
+🚢🧊💔|Titanic
+🦖🏝️|Jurassic Park
+👻🚫|Ghostbusters
+🏠🎈👴|Up
+💍🌋🧙‍♂️|The Lord of the Rings
+⚡👓🧙|Harry Potter
+🤖🌱🗑️|WALL-E
+🐀👨‍🍳|Ratatouille
+🦇🧔🌃|Batman
+🐼🥋|Kung Fu Panda
+🍫🏭🎫|Charlie and the Chocolate Factory
+👽📞🏠|E.T.
+🚗⚡🏁|Cars
+👸🐸|The Princess and the Frog
+🧞‍♂️🪔|Aladdin
+🦍🏙️|King Kong
+🧜‍♀️🐚|The Little Mermaid
+🐘👂✈️|Dumbo
+🌪️🏠👠|The Wizard of Oz
+🧑‍🚀🔴🥔|The Martian
+🏴‍☠️🌊⚓|Pirates of the Caribbean
+💚👹🧅|Shrek
+😊😢😡🤢😨|Inside Out
+⏰🚗⚡|Back to the Future
+🧊🐿️🌰|Ice Age
+🦸‍♂️👨‍👩‍👧‍👦|The Incredibles
+🍝🐶❤️|Lady and the Tramp
+🐝🎬|Bee Movie
+🌹👹|Beauty and the Beast
+🍎👸🪞|Snow White
+🥊🇺🇸|Rocky
+💀🎸🌼|Coco
+🚂❄️🎄|The Polar Express
+🧙‍♀️👠💚|Wicked`)},
+ {id:'capitals', name:'World Capitals', style:'text', prompt:'Capital city of', items:P(`
+France|Paris
+Japan|Tokyo
+Italy|Rome
+Spain|Madrid
+Germany|Berlin
+Canada|Ottawa
+Australia|Canberra
+Egypt|Cairo
+Russia|Moscow
+China|Beijing
+United Kingdom|London
+Mexico|Mexico City
+Brazil|Brasília
+Argentina|Buenos Aires
+Ireland|Dublin
+Greece|Athens
+Portugal|Lisbon
+Norway|Oslo
+Sweden|Stockholm
+Denmark|Copenhagen
+Netherlands|Amsterdam
+Austria|Vienna
+Poland|Warsaw
+Thailand|Bangkok
+South Korea|Seoul
+India|New Delhi
+Kenya|Nairobi
+Peru|Lima
+Cuba|Havana
+Turkey|Ankara
+Hungary|Budapest
+Czech Republic|Prague
+Finland|Helsinki
+Belgium|Brussels
+Switzerland|Bern
+Philippines|Manila
+Vietnam|Hanoi
+Indonesia|Jakarta
+Chile|Santiago
+Iceland|Reykjavík`)},
+ {id:'animals', name:'Animals', style:'emoji', prompt:'Name the animal', items:P(`
+🦘|Kangaroo
+🦒|Giraffe
+🦓|Zebra
+🦔|Hedgehog
+🦦|Otter
+🦥|Sloth
+🦩|Flamingo
+🦚|Peacock
+🐙|Octopus
+🦑|Squid
+🦀|Crab
+🦞|Lobster
+🐢|Turtle
+🦎|Lizard
+🐊|Crocodile
+🦛|Hippo
+🦏|Rhino
+🐫|Camel
+🦙|Llama
+🦡|Badger
+🦨|Skunk
+🦫|Beaver
+🦇|Bat
+🦉|Owl
+🦅|Eagle
+🐧|Penguin
+🦭|Seal
+🐳|Whale
+🐬|Dolphin
+🦈|Shark
+🐝|Bee
+🐞|Ladybug
+🦋|Butterfly
+🐌|Snail
+🦂|Scorpion
+🦃|Turkey
+🦜|Parrot
+🦢|Swan
+🦌|Deer
+🐿️|Chipmunk`)},
+ {id:'food', name:'Food & Drink', style:'emoji', prompt:'Name it', items:P(`
+🥐|Croissant
+🥨|Pretzel
+🥯|Bagel
+🧇|Waffle
+🥞|Pancakes
+🌮|Taco
+🌯|Burrito
+🍣|Sushi
+🥟|Dumpling
+🍜|Ramen
+🥥|Coconut
+🥝|Kiwi
+🍍|Pineapple
+🥭|Mango
+🍆|Eggplant
+🥑|Avocado
+🥦|Broccoli
+🌶️|Chili pepper
+🧄|Garlic
+🥕|Carrot
+🌽|Corn
+🍄|Mushroom
+🥜|Peanuts
+🧀|Cheese
+🍩|Donut
+🧁|Cupcake
+🎂|Birthday cake
+🍿|Popcorn
+🥧|Pie
+🍫|Chocolate
+🍯|Honey
+🧋|Bubble tea
+🫐|Blueberries
+🍒|Cherries
+🍑|Peach
+🍐|Pear
+🍋|Lemon
+🥖|Baguette
+🥗|Salad
+🍉|Watermelon`)},
+ {id:'phrases', name:'Finish the Phrase', style:'text', prompt:'Fill in the blank', items:P(`
+Piece of ___|cake
+Break a ___|leg
+Once in a blue ___|moon
+The early bird catches the ___|worm
+Bite the ___|bullet
+Under the ___|weather
+Spill the ___|beans
+Cat got your ___?|tongue
+Let the cat out of the ___|bag
+Cost an arm and a ___|leg
+Barking up the wrong ___|tree
+The ball is in your ___|court
+Don't cry over spilled ___|milk
+Actions speak louder than ___|words
+When pigs ___|fly
+A penny for your ___|thoughts
+Better late than ___|never
+Kill two birds with one ___|stone
+Every cloud has a silver ___|lining
+Curiosity killed the ___|cat
+Back to the drawing ___|board
+The whole nine ___|yards
+Hold your ___|horses
+Skating on thin ___|ice
+Rome wasn't built in a ___|day
+Two peas in a ___|pod
+Easy as ___|pie
+Head over ___|heels
+Burn the midnight ___|oil
+Beat around the ___|bush
+Go the extra ___|mile
+Jump on the ___|bandwagon
+Wild goose ___|chase
+Read between the ___|lines
+Hit the nail on the ___|head
+Don't judge a book by its ___|cover
+Many hands make light ___|work
+The best of both ___|worlds`)},
+ {id:'states', name:'State Abbreviations', style:'text', prompt:'Which US state?', items:P(`
+AK|Alaska
+AL|Alabama
+AR|Arkansas
+AZ|Arizona
+CT|Connecticut
+DE|Delaware
+HI|Hawaii
+IA|Iowa
+ID|Idaho
+IL|Illinois
+IN|Indiana
+KS|Kansas
+KY|Kentucky
+LA|Louisiana
+MA|Massachusetts
+MD|Maryland
+ME|Maine
+MI|Michigan
+MN|Minnesota
+MO|Missouri
+MS|Mississippi
+MT|Montana
+NE|Nebraska
+NV|Nevada
+NC|North Carolina
+OK|Oklahoma
+OR|Oregon
+PA|Pennsylvania
+TN|Tennessee
+VA|Virginia
+VT|Vermont
+WA|Washington
+WI|Wisconsin
+WV|West Virginia
+WY|Wyoming
+NM|New Mexico
+NH|New Hampshire
+NJ|New Jersey
+SC|South Carolina
+GA|Georgia`)},
+ {id:'elements', name:'Element Symbols', style:'text', prompt:'Which element?', items:P(`
+H|Hydrogen
+He|Helium
+Li|Lithium
+C|Carbon
+N|Nitrogen
+O|Oxygen
+Na|Sodium
+Mg|Magnesium
+Al|Aluminum
+Si|Silicon
+P|Phosphorus
+S|Sulfur
+Cl|Chlorine
+K|Potassium
+Ca|Calcium
+Fe|Iron
+Cu|Copper
+Zn|Zinc
+Ag|Silver
+Au|Gold
+Hg|Mercury
+Pb|Lead
+Sn|Tin
+Ne|Neon
+Ar|Argon
+U|Uranium
+Ni|Nickel
+Pt|Platinum
+I|Iodine
+F|Fluorine
+Ti|Titanium
+Co|Cobalt
+Kr|Krypton
+Rn|Radon
+B|Boron
+W|Tungsten
+Mn|Manganese
+Cr|Chromium`)},
+ {id:'spanish', name:'Spanish to English', style:'text', prompt:'In English, please', items:P(`
+gato|cat
+perro|dog
+casa|house
+agua|water
+rojo|red
+libro|book
+manzana|apple
+leche|milk
+sol|sun
+luna|moon
+playa|beach
+coche|car
+mesa|table
+silla|chair
+queso|cheese
+pan|bread
+hermano|brother
+amigo|friend
+cielo|sky
+árbol|tree
+flor|flower
+verde|green
+azul|blue
+grande|big
+pequeño|small
+feliz|happy
+noche|night
+zapato|shoe
+ventana|window
+puerta|door
+cocina|kitchen
+pollo|chicken
+caballo|horse
+pájaro|bird
+pez|fish
+fuego|fire
+nieve|snow
+cumpleaños|birthday
+pastel|cake
+regalo|gift`)},
+ {id:'math', name:'Quick Math', style:'text', gen(){
+    const k = rand(3);
+    if (k === 0){ const a = 2 + rand(11), b = 2 + rand(11); return {q:`${a} × ${b}`, a:String(a*b), p:'Solve it'}; }
+    if (k === 1){ const a = 12 + rand(78), b = 12 + rand(78); return {q:`${a} + ${b}`, a:String(a+b), p:'Solve it'}; }
+    const a = 30 + rand(70), b = 5 + rand(a - 10); return {q:`${a} − ${b}`, a:String(a-b), p:'Solve it'};
+ }},
+ {id:'scramble', name:'Unscramble', style:'text', gen(){
+    const w = pick(WORDS); let s = w;
+    for (let t = 0; t < 20 && s === w; t++) s = shuffle([...w]).join('');
+    return {q:s, a:w, p:'Unscramble the word'};
+ }},
+ {id:'count', name:'Count Fast', style:'count', gen(){
+    const pool = shuffle(['🎈','🎂','🍕','🐸','⭐','🍩','🎁','🦄','🌮','🐝','🍓','🐙']);
+    const t = pool[0], n = 3 + rand(10), m = 4 + rand(8);
+    const arr = shuffle([...Array(n).fill(t), ...Array.from({length:m}, () => pool[1 + rand(2)])]);
+    return {q:arr.join(''), a:String(n), p:`How many ${t}?`};
+ }},
+];
+const WORDS = 'PARTY CANDLE BALLOON PRESENT GUITAR PLANET ORANGE GARDEN PIRATE ROCKET CASTLE WINTER SUMMER PENCIL BASKET MONKEY DRAGON CAMERA JUNGLE TURTLE PICNIC ISLAND SPIDER BUTTER COOKIE FOREST CHERRY PUZZLE MAGNET TICKET MARBLE HAMMER BRIDGE CACTUS FINGER JACKET KITTEN LADDER PILLOW SCHOOL TOMATO WALLET YELLOW ZIPPER BANANA CIRCUS DONKEY GOBLIN HELMET KETTLE LIZARD MUFFIN NAPKIN PEPPER RABBIT SALMON TEAPOT VIOLIN WIZARD CONFETTI'.split(' ');
+
+const COLORS = ['#e8173a','#00a8cc','#e0a800','#8a2be2','#16a843','#ff6a00','#2a5cff','#ff2ea6','#00a693','#c0392b','#6c5ce7','#c99a06','#0a8fe0','#e84393','#22994f','#ff4757','#3742fa','#ec8f00','#1fb85c','#a55eea','#1e7fe0','#ff5533','#1aa35a','#8854d0','#eb3b5a','#0d9e97','#f07a1a','#4b7bec','#d9a20f','#2f95d8'];
+
+/* ================= Helpers ================= */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function rand(n){ return Math.floor(Math.random() * n); }
+function pick(a){ return a[rand(a.length)]; }
+function shuffle(a){ a = [...a]; for (let i = a.length - 1; i > 0; i--){ const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+let custom = store.get('sq_custom') || [];
+let PHOTO_CATS = [];
+const PB = {}, pbLoading = {};
+function loadPB(id){
+  if (pbLoading[id]) return pbLoading[id];
+  return pbLoading[id] = fetch(`photos/${id}.json`).then(r => r.json()).then(a => { PB[id] = a; if (typeof D !== 'undefined' && D && D.cat === id) paintDuel(); if (window.onPBLoaded) window.onPBLoaded(); })
+    .catch(() => { delete pbLoading[id]; });
+}
+function pbUrl(q){ const [, id, i] = q.split(':'); if (!PB[id]){ loadPB(id); return null; } return PB[id][+i]; }
+fetch('photos/index.json').then(r => r.json()).then(async list => {
+  PHOTO_CATS = list.map(c => ({id:c.id, name:c.name, style:'photo', prompt:c.prompt, items:c.answers.map((a, i) => [`pb:${c.id}:${i}`, a])}));
+  if (document.querySelector('.setup')) renderSetup();
+  if (document.querySelector('#board')) paintBoard();
+  for (const c of list) await loadPB(c.id);
+}).catch(() => {});
+const allCats = () => [...PHOTO_CATS, ...BUILTIN, ...custom];
+const cat = id => allCats().find(c => c.id === id) || BUILTIN[0];
+const catName = id => cat(id).name;
+const saveCustom = () => store.set('sq_custom', custom);
+
+/* ================= Sound ================= */
+let soundOn = store.get('sq_sound') ?? true, ac = null;
+function tone(f, d, type = 'sine', vol = .15, delay = 0){
+  if (!soundOn) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d + .02);
+  } catch {}
+}
+const sfx = {
+  ding(){ tone(880, .12, 'triangle', .18); tone(1320, .22, 'triangle', .18, .08); },
+  tick(){ tone(1100, .05, 'square', .05); },
+  blip(){ tone(660, .05, 'triangle', .08); },
+  pass(){ tone(330, .18, 'triangle', .14); },
+  go(){ tone(523, .1, 'triangle', .15); tone(784, .25, 'triangle', .15, .1); },
+  buzz(){ tone(110, .9, 'sawtooth', .2); tone(116, .9, 'sawtooth', .12); },
+  fanfare(){ [523,659,784,1047].forEach((f,i) => tone(f, .35, 'triangle', .16, i * .14)); },
+};
+
+/* ================= Duel music: original chiptune, generated live ================= */
+const music = (() => {
+  let timer = null, next = 0, step = 0, bus = null, playing = false, intense = false, noiseBuf = null;
+  let on = store.get('sq_music') ?? true;
+  const N = n => 440 * Math.pow(2, (n - 69) / 12);
+  const ROOTS = [45, 43, 41, 40];                       // A minor: Am, G, F, E
+  const CHORDS = [[69, 72, 76, 81], [67, 71, 74, 79], [65, 69, 72, 77], [64, 68, 71, 76]];
+  const ARP = [0, 1, 2, 3, 2, 1, 2, 3, 0, 1, 2, 3, 2, 3, 2, 1];
+  const BASS = [0, 0, 12, 0, 0, 12, 0, 7];
+  function tone(type, freq, t, dur, vol){
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(bus); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function kick(t){
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    o.connect(g).connect(bus); o.start(t); o.stop(t + 0.17);
+  }
+  function hiss(t, dur, vol, hp){
+    if (!noiseBuf){ noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.3), ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = hp;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(f).connect(g).connect(bus); src.start(t); src.stop(t + dur + 0.02);
+  }
+  function schedule(){
+    if (!playing) return;
+    const dt = 60 / (intense ? 178 : 148) / 4;            // sixteenth notes
+    while (next < ac.currentTime + 0.12){
+      const bar = Math.floor(step / 16) % 4, s16 = step % 16;
+      if (s16 % 2 === 0) tone('square', N(ROOTS[bar] + BASS[s16 / 2]), next, dt * 1.8, 0.15);
+      tone('square', N(CHORDS[bar][ARP[s16]]), next, dt * 0.85, intense ? 0.07 : 0.05);
+      if (s16 === 0 || s16 === 8 || (intense && (s16 === 6 || s16 === 14))) kick(next);
+      if (s16 === 4 || s16 === 12) hiss(next, 0.12, 0.35, 1500);
+      if (intense || s16 % 2 === 0) hiss(next, 0.03, 0.12, 7000);
+      next += dt; step++;
+    }
+  }
+  return {
+    get on(){ return on; },
+    set intense(v){ intense = !!v; },
+    start(){
+      if (!on || !soundOn || playing) return;
+      try {
+        ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+        if (ac.state === 'suspended') ac.resume();
+        bus = ac.createGain(); bus.gain.value = 0.22; bus.connect(ac.destination);
+      } catch { return; }
+      playing = true; step = 0; intense = false; next = ac.currentTime + 0.05;
+      timer = setInterval(schedule, 25); schedule();
+    },
+    stop(){
+      if (!playing) return;
+      playing = false; clearInterval(timer);
+      const b = bus;
+      try { b.gain.setTargetAtTime(0, ac.currentTime, 0.05); setTimeout(() => { try { b.disconnect(); } catch {} }, 400); } catch {}
+    },
+    toggle(){
+      on = !on; store.set('sq_music', on);
+      if (!on) this.stop(); else if (typeof D !== 'undefined' && D && D.phase === 'run') this.start();
+      return on;
+    },
+  };
+})();
+
+/* ================= State ================= */
+const PHOTO_FOR = {actors:'ph-actors', mammals:'ph-animals', disney:'ph-disney-characters', athletes:'ph-famous-athletes', produce:'ph-fruits-and-vegetables', kitchen:'ph-kitchen-items', logos:'ph-logos', ocean:'ph-ocean-animals'};
+const defaultDraft = () => ({
+  example: false, blankStart: true,
+  rows: [{name:'', cat:''}, {name:'', cat:''}],
+  seconds: 30, pass: 3, shuffleSeats: true, photoOnly: true,
+});
+let draft = store.get('sq_draft');
+if (!draft || draft.example || !draft.blankStart) draft = defaultDraft();
+if (draft.photoOnly === undefined) draft.photoOnly = true;
+let S = store.get('sq_game');          // game in progress
+let D = null;                          // live duel
+let flashId = null, picking = false;
+const saveDraft = () => store.set('sq_draft', draft);
+const saveGame = () => store.set('sq_game', S);
+const pl = id => S.players.find(p => p.id === id);
+if (!draft.photoMig){ draft.rows.forEach(r => { if (PHOTO_FOR[r.cat]) r.cat = PHOTO_FOR[r.cat]; }); draft.photoMig = true; saveDraft(); }
+if (S && !S.photoMig){ S.players.forEach(p => { if (PHOTO_FOR[p.cat]) p.cat = PHOTO_FOR[p.cat]; }); S.photoMig = true; saveGame(); }
+const alivePlayers = () => S.players.filter(p => p.alive);
+
+function render(){
+  if (!S || S.phase === 'setup') return renderSetup();
+  if (S.phase === 'duel' && D) return renderDuel();
+  if (S.phase === 'champ') return renderChamp();
+  S.phase = 'board'; renderBoard();
+}
+
+/* ================= Setup ================= */
+function catOptions(sel, taken = new Set()){
+  const opt = c => { const t = taken.has(c.id) && c.id !== sel; return `<option value="${c.id}"${c.id === sel ? ' selected' : ''}${t ? ' disabled' : ''}>${esc(c.name)}${t ? ' (taken)' : ''}</option>`; };
+  const none = `<option value=""${sel ? '' : ' selected'}>Choose a category…</option>`;
+  if (draft.photoOnly){
+    const list = [...PHOTO_CATS, ...custom.filter(c => c.style === 'photo')];
+    const extra = sel && !list.some(c => c.id === sel) ? opt(cat(sel)) : '';
+    return none + list.map(opt).join('') + extra;
+  }
+  const u = custom.length ? `<optgroup label="Your photo & custom categories">${custom.map(opt).join('')}</optgroup>` : '';
+  const ph = PHOTO_CATS.length ? `<optgroup label="Photo categories">${PHOTO_CATS.map(opt).join('')}</optgroup>` : '';
+  return none + ph + u + `<optgroup label="Party categories">${PARTY.map(opt).join('')}</optgroup>`
+           + `<optgroup label="More categories">${BUILTIN.filter(c => !PARTY.includes(c)).map(opt).join('')}</optgroup>`;
+}
+function renderSetup(err = ''){
+  const inProgress = S && S.phase !== 'setup' && S.phase !== 'champ';
+  const upNext = draft.rows.findIndex(r => !r.cat);
+  app.innerHTML = `
+  <div class="screen setup">
+    <header class="hero">
+      <h1 class="logo">Square<b>.</b>Off</h1>
+      <p>A party trivia game. Win head-to-head duels, take over your neighbors' squares, and own the whole board.</p>
+    </header>
+    <div class="setup-grid">
+      <section class="card">
+        <h2>Players <span class="pill">${draft.rows.length}</span>${draft.example ? '<span class="pill">Example names</span>' : ''}</h2>
+        <p class="hint">Type each guest's name and press Enter for the next one. Press Randomize order to shuffle the list: #1 picks a category first, then #2, and so on. Deal random categories fills in anyone who hasn't picked.</p>
+        ${upNext >= 0 && draft.rows.length > 1 ? `<p class="next-pick">Next to pick: <b>${esc(draft.rows[upNext].name.trim() || `Player ${upNext + 1}`)}</b></p>` : ''}
+        <div class="plist">
+          ${draft.rows.map((r, i) => `
+          <div class="prow${i === upNext ? ' up' : ''}">
+            <span class="seat" style="background:${COLORS[i % COLORS.length]}" title="Pick order">${i + 1}</span>
+            <input id="pn-${i}" data-i="${i}" class="pname" value="${esc(r.name)}" placeholder="Player ${i + 1}" aria-label="Player ${i + 1} name">
+            <select id="pc-${i}" data-i="${i}" class="pcat" aria-label="Player ${i + 1} category">${catOptions(r.cat, new Set(draft.rows.filter((x, j) => j !== i && x.cat).map(x => x.cat)))}</select>
+            <button class="x" data-del="${i}" aria-label="Remove player ${i + 1}">×</button>
+          </div>`).join('')}
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="addP">Add player</button>
+          <button class="btn" id="shuffleP">Randomize order</button>
+          <button class="btn gold" id="mixCats">Deal random categories</button>
+          <label class="check" style="margin:0"><input type="checkbox" id="photoOnly"${draft.photoOnly ? ' checked' : ''}> Photo categories only</label>
+          ${draft.example ? '<button class="btn ghost" id="clearP">Clear example names</button>' : ''}
+        </div>
+      </section>
+      <div class="side">
+        <section class="card">
+          <h2>Clock</h2>
+          <div class="row">
+            <div class="field"><label for="secs">Seconds per player</label>
+              <select id="secs">${[20,30,45,60].map(s => `<option${s == draft.seconds ? ' selected' : ''}>${s}</option>`).join('')}</select></div>
+            <div class="field"><label for="passS">Pass costs</label>
+              <select id="passS">${[2,3,5].map(s => `<option value="${s}"${s == draft.pass ? ' selected' : ''}>${s} seconds</option>`).join('')}</select></div>
+          </div>
+          <label class="check"><input type="checkbox" id="seats"${draft.shuffleSeats ? ' checked' : ''}> Random seats on the board</label>
+          <div class="field" style="margin-top:12px"><label for="tvSize">Screen size (applies right away; + and - also adjust it)</label>
+            <select id="tvSize">${TV_SIZES.map(([k, l]) => `<option value="${k}"${tvZoom() == k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+          <label class="check"><input type="checkbox" id="autoFs"${draft.autoFs !== false ? ' checked' : ''}> Go full screen when the game starts (F key toggles)</label>
+        </section>
+        ${editorHTML()}
+        <section class="card rules">
+          <h2>How to play</h2>
+          <ol>
+            <li>Everyone gets a <b>square</b> and a <b>category</b>.</li>
+            <li>A random player <b>challenges a neighbor</b>. The duel is in the <b>defender's category</b>.</li>
+            <li>Each player has a clock. A clue appears and the player on the clock shouts the answer. When they get it right, their clock stops and their opponent's starts.</li>
+            <li><b>Pass</b> costs 3 seconds and brings up a new clue.</li>
+            <li>Run out of time and you're out. The winner takes all your squares and the category that wasn't played.</li>
+            <li>Last one standing owns the board.</li>
+          </ol>
+        </section>
+      </div>
+    </div>
+    <div class="startbar">
+      <button class="btn gold big" id="start">Start the game</button>
+      ${inProgress ? '<button class="btn big" id="resume">Resume game in progress</button>' : ''}
+      ${err ? `<span class="err">${esc(err)}</span>` : ''}
+    </div>
+  </div>`;
+
+  app.querySelectorAll('.pname').forEach(el => el.addEventListener('input', e => { draft.rows[+e.target.dataset.i].name = e.target.value; draft.example = false; saveDraft(); }));
+  app.querySelectorAll('.pname').forEach(el => el.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const i = +e.target.dataset.i, next = $(`#pn-${i + 1}`);
+    if (next){ next.focus(); return; }
+    if (!e.target.value.trim()) return;
+    $('#addP').click();
+  }));
+  app.querySelectorAll('.pcat').forEach(el => el.addEventListener('change', e => { draft.rows[+e.target.dataset.i].cat = e.target.value; saveDraft(); renderSetup(); }));
+  app.querySelectorAll('[data-del]').forEach(el => el.addEventListener('click', () => { draft.rows.splice(+el.dataset.del, 1); saveDraft(); renderSetup(); }));
+  $('#addP').onclick = () => {
+    if (draft.rows.length >= 30) return renderSetup('30 players is the limit.');
+    draft.rows.push({name:'', cat:''}); saveDraft(); renderSetup();
+    const last = $(`#pn-${draft.rows.length - 1}`); last && last.focus();
+  };
+  $('#mixCats').onclick = () => {
+    const twins = new Set(Object.keys(PHOTO_FOR).filter(k => PHOTO_CATS.some(c => c.id === PHOTO_FOR[k])));
+    const pool = (draft.photoOnly ? [...PHOTO_CATS, ...custom.filter(c => c.style === 'photo')] : allCats().filter(c => !twins.has(c.id))).map(c => c.id);
+    if (!pool.length) return renderSetup('Photo categories are still loading. Try again in a moment.');
+    if (!draft.rows.some(r => !r.cat)) draft.rows.forEach(r => { r.cat = ''; });   // everyone has one: deal fresh
+    const taken = new Set(draft.rows.filter(r => r.cat).map(r => r.cat));
+    let deck = shuffle(pool.filter(id => !taken.has(id)));
+    draft.rows.forEach(r => { if (r.cat) return; if (!deck.length) deck = shuffle(pool); r.cat = deck.pop(); });
+    saveDraft(); renderSetup();
+  };
+  $('#shuffleP').onclick = e => {
+    if (draft.rows.length < 2) return;
+    const btn = e.currentTarget;
+    if (draft.rows.some(r => r.cat) && btn.dataset.armed !== '1'){
+      btn.dataset.armed = '1'; btn.textContent = 'Click again: clears picks';
+      setTimeout(() => { if (btn.isConnected){ btn.dataset.armed = ''; btn.textContent = 'Randomize order'; } }, 3000);
+      return;
+    }
+    draft.rows = shuffle(draft.rows).map(r => ({...r, cat:''}));
+    saveDraft(); renderSetup();
+  };
+  $('#photoOnly').onchange = e => {
+    draft.photoOnly = e.target.checked;
+    if (draft.photoOnly){ const ok = new Set([...PHOTO_CATS, ...custom.filter(c => c.style === 'photo')].map(c => c.id)); draft.rows.forEach(r => { if (r.cat && !ok.has(r.cat)) r.cat = ''; }); }
+    saveDraft(); renderSetup();
+  };
+  const cl = $('#clearP'); if (cl) cl.onclick = () => { draft.rows.forEach(r => r.name = ''); draft.example = false; saveDraft(); renderSetup(); };
+  $('#secs').onchange = e => { draft.seconds = +e.target.value; saveDraft(); };
+  $('#passS').onchange = e => { draft.pass = +e.target.value; saveDraft(); };
+  $('#seats').onchange = e => { draft.shuffleSeats = e.target.checked; saveDraft(); };
+  $('#autoFs').onchange = e => { draft.autoFs = e.target.checked; saveDraft(); };
+  $('#tvSize').onchange = e => { setTvZoom(+e.target.value); };
+  bindEditor();
+  $('#start').onclick = startGame;
+  const rs = $('#resume'); if (rs) rs.onclick = () => { if (draft.autoFs !== false) enterFullscreen(); S.phase = 'board'; render(); };
+}
+
+/* ================= Custom category editor (text or photos) ================= */
+const idb = (() => {
+  let dbp;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try { const r = indexedDB.open('squareoff', 1); r.onupgradeneeded = () => r.result.createObjectStore('img'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+    catch (e) { rej(e); }
+  }));
+  const run = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const tx = db.transaction('img', mode); const out = fn(tx.objectStore('img')); tx.oncomplete = () => res(out && out.v); tx.onerror = () => rej(tx.error); }); };
+  return {
+    put: (k, v) => run('readwrite', s => { s.put(v, k); }),
+    del: k => run('readwrite', s => { s.delete(k); }),
+    getAll: () => run('readonly', s => { const out = {v:{}}; const req = s.openCursor(); req.onsuccess = () => { const c = req.result; if (c){ out.v[c.key] = c.value; c.continue(); } }; return out; }),
+  };
+})();
+let imgs = {};
+const SHAPES = {states:{}, countries:{}};
+fetch('states.json').then(r => r.json()).then(j => { SHAPES.states = j; }).catch(() => {});
+fetch('world.json').then(r => r.json()).then(j => { SHAPES.world = j; }).catch(() => {});
+function worldSVG(name){
+  const W = SHAPES.world, t = W && W.t[name];
+  if (!t) return '';
+  const k = Math.cos(t.lat * Math.PI / 180);
+  const x0 = t.b[0] * k, x1 = t.b[2] * k, y0 = t.b[1], y1 = t.b[3];
+  const w = x1 - x0, h = y1 - y0, half = Math.max(w, h) / 2 + 0.7 * Math.max(w, h, 6);
+  const hw = half * 4 / 3, vx = (x0 + x1) / 2 - hw, vy = (y0 + y1) / 2 - half, vw = 2 * hw, vh = 2 * half;
+  let paths = '';
+  for (const [n, c] of Object.entries(W.c)){
+    if (n === t.k) continue;
+    const b = c.b;
+    if (b[2] * k < vx - vw / 3 || b[0] * k > vx + vw * 4 / 3 || b[3] < vy - vh / 3 || b[1] > vy + vh * 4 / 3) continue;
+    paths += `<path d="${c.d}"/>`;
+  }
+  paths += `<path class="hit" d="${W.c[t.k].d}"/>`;
+  return `<svg viewBox="${vx} ${vy} ${vw} ${vh}" aria-hidden="true"><g transform="scale(${k} 1)">${paths}</g></svg>`;
+}
+const newKey = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const blankEd = () => ({id:null, mode:'photo', name:'', prompt:'', text:'', photos:[], busy:'', msg:''});
+let ed = blankEd();
+
+function photoGridHTML(){
+  return ed.photos.map(p => `<div class="ph">
+      <img src="${p.url}" alt="">
+      <button class="x" data-prm="${p.key}" aria-label="Remove photo">×</button>
+      <input id="ph-${p.key}" data-key="${p.key}" class="phA${p.a.trim() ? '' : ' missing'}" value="${esc(p.a)}" placeholder="Answer" aria-label="Answer for this photo">
+    </div>`).join('') + (ed.busy ? `<div class="busy">Adding photo ${ed.busy}…</div>` : '');
+}
+function editorHTML(){
+  const photo = ed.mode === 'photo';
+  return `<section class="card" id="editor">
+    <h2>${ed.id ? 'Edit category' : 'Make your own category'}</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabPhoto" aria-selected="${photo}">Photo clues</button>
+      <button class="tab" role="tab" id="tabText" aria-selected="${!photo}">Text clues</button>
+    </div>
+    <div class="field" style="margin-bottom:10px"><label for="cName">Category name</label><input id="cName" value="${esc(ed.name)}" placeholder="${photo ? 'Baby Pictures' : 'All About the Birthday Star'}"></div>
+    ${photo ? `
+      <div class="field" style="margin-bottom:10px"><label for="cPrompt">Question shown above each photo (optional)</label><input id="cPrompt" value="${esc(ed.prompt)}" placeholder="Who is this?"></div>
+      <label class="drop" id="drop"><input type="file" id="cFiles" accept="image/*" multiple>
+        <strong>Choose photos</strong><span>or drag them here. You can pick lots at once.</span>
+        <span style="font-size:.8rem">Name each file after its answer, like golden-retriever.jpg, and the answer fills in for you.</span></label>
+      <div class="pgrid" id="pgrid">${photoGridHTML()}</div>`
+    : `<p class="hint">One clue per line: <code>clue | answer</code>. Aim for 20 or more.</p>
+      <textarea id="cItems" aria-label="Clues" placeholder="What city was I born in? | Denver&#10;My first pet's name? | Biscuit&#10;Favorite band in high school? | ...">${esc(ed.text)}</textarea>`}
+    <div class="row" style="margin-top:10px">
+      <button class="btn gold" id="cSave">${ed.id ? 'Save changes' : 'Save category'}</button>
+      ${ed.id || ed.photos.length || ed.text ? '<button class="btn ghost" id="cReset">Cancel</button>' : ''}
+      <span id="cMsg" class="hint" style="margin:0">${esc(ed.msg)}</span>
+    </div>
+    ${custom.length ? `<div class="customs">${custom.map(c => `<div class="custom-item"><span>${esc(c.name)} · ${c.items.length} ${c.style === 'photo' ? 'photos' : 'clues'}</span>
+      <div class="row"><button class="btn ghost" data-cedit="${c.id}">Edit</button><button class="x" data-cdel="${c.id}" aria-label="Delete ${esc(c.name)}">×</button></div></div>`).join('')}</div>` : ''}
+  </section>`;
+}
+function setMsg(m){ ed.msg = m; const el = $('#cMsg'); if (el) el.textContent = m; }
+function refreshGrid(){ const g = $('#pgrid'); if (g){ g.innerHTML = photoGridHTML(); bindGrid(); } }
+function bindGrid(){
+  app.querySelectorAll('.phA').forEach(el => el.addEventListener('input', e => {
+    const p = ed.photos.find(x => x.key === e.target.dataset.key); if (p){ p.a = e.target.value; e.target.classList.toggle('missing', !p.a.trim()); }
+  }));
+  app.querySelectorAll('[data-prm]').forEach(el => el.addEventListener('click', () => { ed.photos = ed.photos.filter(p => p.key !== el.dataset.prm); refreshGrid(); }));
+}
+function bindEditor(){
+  $('#tabPhoto').onclick = () => { ed.mode = 'photo'; ed.msg = ''; renderSetup(); };
+  $('#tabText').onclick = () => { ed.mode = 'text'; ed.msg = ''; renderSetup(); };
+  $('#cName').oninput = e => ed.name = e.target.value;
+  const pr = $('#cPrompt'); if (pr) pr.oninput = e => ed.prompt = e.target.value;
+  const tx = $('#cItems'); if (tx) tx.oninput = e => ed.text = e.target.value;
+  const fi = $('#cFiles'); if (fi) fi.onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+  const dz = $('#drop');
+  if (dz){
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addFiles(e.dataTransfer.files); });
+  }
+  bindGrid();
+  $('#cSave').onclick = saveCategory;
+  const rs = $('#cReset'); if (rs) rs.onclick = () => { ed = blankEd(); renderSetup(); };
+  app.querySelectorAll('[data-cedit]').forEach(el => el.addEventListener('click', () => {
+    const c = custom.find(x => x.id === el.dataset.cedit); if (!c) return;
+    const isPhoto = c.style === 'photo';
+    ed = {...blankEd(), id:c.id, mode:isPhoto ? 'photo' : 'text', name:c.name, prompt:c.prompt || '',
+          text: isPhoto ? '' : c.items.map(i => i.join(' | ')).join('\n'),
+          photos: isPhoto ? c.items.map(([q, a]) => ({key:q.slice(4), url:imgs[q.slice(4)] || '', a, isNew:false})).filter(p => p.url) : []};
+    renderSetup(); $('#editor').scrollIntoView({behavior:'smooth', block:'start'});
+  }));
+  app.querySelectorAll('[data-cdel]').forEach(el => el.addEventListener('click', () => {
+    const id = el.dataset.cdel, c = custom.find(x => x.id === id);
+    if (el.dataset.armed !== '1'){ el.dataset.armed = '1'; el.textContent = 'Delete?'; el.style.width = 'auto'; el.style.padding = '0 8px'; setTimeout(() => { if (el.isConnected){ el.dataset.armed = ''; el.textContent = '×'; el.style.width = ''; el.style.padding = ''; } }, 3000); return; }
+    if (c) c.items.forEach(([q]) => { if (q.startsWith('img:')){ const k = q.slice(4); delete imgs[k]; idb.del(k).catch(() => {}); } });
+    custom = custom.filter(x => x.id !== id);
+    draft.rows.forEach(r => { if (r.cat === id) r.cat = BUILTIN[0].id; });
+    if (S) S.players.forEach(p => { if (p.cat === id) p.cat = BUILTIN[0].id; });
+    if (ed.id === id) ed = blankEd();
+    saveCustom(); saveDraft(); if (S) saveGame(); renderSetup();
+  }));
+}
+function guessAnswer(name){
+  let s = name.replace(/\.[^.]+$/, '');
+  if (/^(img|dsc|dscn|pxl|photo|image|screenshot|screen shot|whatsapp)[\s_-]?/i.test(s) || /^[\d\s_-]+$/.test(s)) return '';
+  s = s.replace(/[_-]+/g, ' ').replace(/\s*\(\d+\)$/, '').replace(/\s+\d+$/, '').trim();
+  return s ? s[0].toUpperCase() + s.slice(1) : '';
+}
+async function shrink(file){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const s = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * s)); c.height = Math.max(1, Math.round(img.naturalHeight * s));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', .82);
+  } finally { URL.revokeObjectURL(url); }
+}
+async function addFiles(list){
+  const files = [...list].filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name));
+  if (!files.length){ setMsg('Those files are not photos.'); return; }
+  let failed = 0;
+  for (let i = 0; i < files.length; i++){
+    ed.busy = `${i + 1} of ${files.length}`; refreshGrid();
+    try { ed.photos.push({key:newKey(), url:await shrink(files[i]), a:guessAnswer(files[i].name), isNew:true}); }
+    catch { failed++; }
+  }
+  ed.busy = ''; refreshGrid();
+  setMsg(failed ? `${failed} photo${failed > 1 ? 's' : ''} couldn't be opened. iPhone HEIC photos may need to be converted to JPEG first.` : `${ed.photos.length} photos ready. Check the answers, then save.`);
+}
+async function saveCategory(){
+  const name = ed.name.trim();
+  if (!name) return setMsg('Give the category a name.');
+  let entry, stored = true;
+  if (ed.mode === 'photo'){
+    if (ed.busy) return setMsg('Wait for the photos to finish adding.');
+    if (ed.photos.length < 3) return setMsg('Add at least 3 photos.');
+    const missing = ed.photos.filter(p => !p.a.trim()).length;
+    if (missing) return setMsg(`${missing} photo${missing > 1 ? 's need' : ' needs'} an answer (outlined in orange).`);
+    for (const p of ed.photos){
+      imgs[p.key] = p.url;
+      if (p.isNew){ try { await idb.put(p.key, p.url); p.isNew = false; } catch { stored = false; } }
+    }
+    entry = {id:ed.id || 'c' + newKey(), name, style:'photo', prompt:ed.prompt.trim(), items:ed.photos.map(p => ['img:' + p.key, p.a.trim()])};
+  } else {
+    const items = P(ed.text);
+    if (items.length < 5) return setMsg('Add at least 5 clues, one per line.');
+    entry = {id:ed.id || 'c' + newKey(), name, style:'auto', items};
+  }
+  const old = custom.find(c => c.id === entry.id);
+  if (old){
+    const keep = new Set(entry.items.map(i => i[0]));
+    old.items.forEach(([q]) => { if (q.startsWith('img:') && !keep.has(q)){ const k = q.slice(4); delete imgs[k]; idb.del(k).catch(() => {}); } });
+    custom = custom.map(c => c.id === entry.id ? entry : c);
+    if (S && S.used) delete S.used[entry.id];
+  } else custom.push(entry);
+  saveCustom();
+  ed = blankEd();
+  ed.msg = stored ? `Saved "${name}". Pick it for a player above.` : `Saved "${name}", but this browser won't keep the photos after you close the tab.`;
+  renderSetup();
+}
+
+const TV_SIZES = [[1, 'Normal'], [1.3, 'Big'], [1.6, 'Bigger'], [1.9, 'Huge']];
+function tvZoom(){ const z = +store.get('sq_tvzoom'); return z >= 1 && z <= 2.5 ? z : 1.3; }
+function setTvZoom(z){ store.set('sq_tvzoom', Math.round(Math.min(2.5, Math.max(1, z)) * 10) / 10); applyTv(); }
+function applyTv(){
+  const on = !REMOTE_CODE && tvZoom() > 1;
+  document.documentElement.classList.toggle('tv', on);
+  document.documentElement.style.setProperty('--tvz', tvZoom());
+  if (typeof sizeBoard === 'function') requestAnimationFrame(sizeBoard);
+}
+document.addEventListener('fullscreenchange', applyTv);
+// Esc in full screen exits full screen instead of reaching the page, so leaving full screen mid-duel pauses it.
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && typeof D !== 'undefined' && D && (D.phase === 'run' || D.phase === 'pass')) togglePause();
+});
+function enterFullscreen(){
+  try { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(() => {}); } catch {}
+}
+function toggleFullscreen(){
+  try { if (document.fullscreenElement) document.exitFullscreen(); else enterFullscreen(); } catch {}
+}
+// Hide the mouse pointer on the TV after a few idle seconds in full screen.
+{
+  let idle = null;
+  const wake = () => { document.body.classList.remove('nocursor'); clearTimeout(idle); if (document.fullscreenElement) idle = setTimeout(() => document.body.classList.add('nocursor'), 2500); };
+  document.addEventListener('mousemove', wake);
+  document.addEventListener('fullscreenchange', () => { wake(); if (typeof sizeBoard === 'function') setTimeout(sizeBoard, 60); });
+}
+function startGame(){
+  if (draft.autoFs !== false && !REMOTE_CODE) enterFullscreen();
+  const rows = draft.rows.map((r, i) => ({...r, name: r.name.trim() || `Player ${i + 1}`}));
+  if (rows.length < 2) return renderSetup('You need at least 2 players.');
+  const noCat = rows.find(r => !r.cat);
+  if (noCat) return renderSetup(`${noCat.name} still needs a category. Pick one, or press Deal random categories.`);
+  const players = rows.map((r, i) => ({id:'p' + i, name:r.name, cat:r.cat, color:COLORS[i % COLORS.length], alive:true}));
+  const order = draft.shuffleSeats ? shuffle(players.map(p => p.id)) : players.map(p => p.id);
+  S = {phase:'board', players, cells:order, cols:Math.ceil(Math.sqrt(order.length)), used:{}, seconds:draft.seconds, pass:draft.pass,
+       challenger:null, lastWinner:null, msg:'', history:[]};
+  saveGame(); requestWake(); render();
+}
+
+/* ================= Board ================= */
+function neighbors(pid){
+  const out = new Set(), n = S.cells.length, cols = S.cols;
+  S.cells.forEach((o, i) => {
+    if (o !== pid) return;
+    const c = i % cols, adj = [i - cols, i + cols];
+    if (c > 0) adj.push(i - 1);
+    if (c < cols - 1) adj.push(i + 1);
+    adj.forEach(j => { if (j >= 0 && j < n && S.cells[j] !== pid) out.add(S.cells[j]); });
+  });
+  return out;
+}
+
+function renderBoard(){
+  const alive = alivePlayers().length;
+  app.innerHTML = `
+  <div class="screen">
+    <header class="bar">
+      <div class="brand"><span class="logo">Square<b>.</b>Off</span><span class="tag">${alive} of ${S.players.length} players left</span></div>
+      <div class="actions">
+        ${S.history.length ? '<button class="btn ghost" id="undo">Undo last duel</button>' : ''}
+        <button class="btn ghost" id="remoteBtn">Phone remote</button>
+        <button class="btn ghost" id="snd">${soundOn ? 'Sound on' : 'Sound off'}</button>
+        <button class="btn ghost" id="mus">${music.on ? 'Music on' : 'Music off'}</button>
+        <button class="btn ghost" id="fs">Fullscreen</button>
+        <button class="btn ghost" id="setup">Players &amp; settings</button>
+      </div>
+    </header>
+    <div class="callout" id="callout"></div>
+    <div class="board-wrap" id="bw"><div class="board" id="board"></div></div>
+  </div>`;
+  const u = $('#undo'); if (u) u.onclick = undo;
+  $('#snd').onclick = () => { soundOn = !soundOn; store.set('sq_sound', soundOn); if (!soundOn) music.stop(); renderBoard(); };
+  $('#mus').onclick = () => { music.toggle(); renderBoard(); };
+  $('#remoteBtn').onclick = openRemoteModal; remoteStatus();
+  $('#fs').onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); } catch {} };
+  $('#setup').onclick = () => { renderSetup(); };
+  $('#board').addEventListener('click', onCellClick);
+  paintCallout(); paintBoard(); sizeBoard();
+}
+
+function paintCallout(){
+  const el = $('#callout'); if (!el) return;
+  if (picking){ el.innerHTML = `<div class="msg">Picking a player…</div>`; return; }
+  if (S.challenger){
+    const c = pl(S.challenger);
+    el.innerHTML = `<div class="msg"><em>${esc(c.name)}</em>, pick a neighbor to challenge.</div>
+      <button class="btn ghost" id="cancelC">Choose someone else</button>
+      <div class="sub">Tap a square with a dashed outline. You'll play in that player's category.</div>`;
+    $('#cancelC').onclick = () => { S.challenger = null; saveGame(); paintCallout(); paintBoard(); };
+    return;
+  }
+  const w = S.lastWinner && pl(S.lastWinner);
+  el.innerHTML = `${S.msg ? `<div class="msg">${S.msg}</div>` : ''}
+    <div class="row" style="justify-content:center">
+      <button class="btn gold big" id="rand">Pick a random player</button>
+      ${w && w.alive ? `<button class="btn big" id="again">${esc(w.name)} challenges again</button>` : ''}
+    </div>
+    <div class="sub">Or tap any square to choose who challenges next.</div>`;
+  $('#rand').onclick = randomPick;
+  const a = $('#again'); if (a) a.onclick = () => { S.challenger = w.id; saveGame(); paintCallout(); paintBoard(); };
+}
+
+function paintBoard(){
+  const b = $('#board'); if (!b) return;
+  const cols = S.cols, n = S.cells.length, home = {}, counts = {};
+  S.cells.forEach((o, i) => { if (!(o in home)) home[o] = i; counts[o] = (counts[o] || 0) + 1; });
+  const targets = S.challenger ? neighbors(S.challenger) : null;
+  b.style.gridTemplateColumns = `repeat(${cols}, var(--cs))`;
+  b.innerHTML = S.cells.map((o, i) => {
+    const p = pl(o), c = i % cols, same = j => j >= 0 && j < n && S.cells[j] === o;
+    const bt = same(i - cols), bb = same(i + cols), bl = c > 0 && same(i - 1), br = c < cols - 1 && same(i + 1);
+    const bc = x => x ? p.color : 'var(--bg)';
+    let cls = 'cell';
+    if (flashId) cls += o === flashId ? ' flash' : ' dim';
+    else if (S.challenger){ if (o === S.challenger) cls += ' chal'; else if (targets.has(o)) cls += ' target'; else cls += ' dim'; }
+    const label = home[o] === i ? `<div class="cell-name">${esc(p.name)}</div><div class="cell-cat">${esc(catName(p.cat))}</div>${counts[o] > 1 ? `<span class="cell-n">${counts[o]}</span>` : ''}` : '';
+    return `<div class="${cls}" data-o="${o}" style="background:${p.color};border-color:${bc(bt)} ${bc(br)} ${bc(bb)} ${bc(bl)}" title="${esc(p.name)} · ${esc(catName(p.cat))}">${label}</div>`;
+  }).join('');
+}
+
+function sizeBoard(){
+  const bw = $('#bw'), b = $('#board'); if (!bw || !b || !S) return;
+  const r = {width: bw.clientWidth, height: bw.clientHeight}, rows = Math.ceil(S.cells.length / S.cols);
+  const cs = Math.max(40, Math.floor(Math.min(r.width / S.cols, r.height / rows)));
+  b.style.setProperty('--cs', cs + 'px');
+  b.style.gridAutoRows = cs + 'px';
+}
+window.addEventListener('resize', sizeBoard);
+
+function onCellClick(e){
+  const cell = e.target.closest('.cell'); if (!cell || picking) return;
+  const o = cell.dataset.o;
+  if (!S.challenger){ S.challenger = o; saveGame(); paintCallout(); paintBoard(); return; }
+  if (o === S.challenger) return;
+  if (neighbors(S.challenger).has(o)) startDuel(S.challenger, o);
+}
+
+function randomPick(){
+  if (picking) return;
+  const alive = shuffle(alivePlayers());
+  picking = true; paintCallout();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let steps = reduce ? 1 : 16 + rand(alive.length), i = 0, delay = 55;
+  const step = () => {
+    flashId = alive[i % alive.length].id; paintBoard(); sfx.blip();
+    i++; steps--;
+    if (steps > 0){ delay *= 1.12; setTimeout(step, delay); }
+    else setTimeout(() => { S.challenger = flashId; flashId = null; picking = false; saveGame(); sfx.ding(); paintCallout(); paintBoard(); }, reduce ? 0 : 450);
+  };
+  step();
+}
+
+function pushHistory(){
+  const snap = JSON.stringify({...S, history:[]});
+  S.history.push(snap); if (S.history.length > 25) S.history.shift();
+}
+function undo(){
+  if (!S.history.length) return;
+  const h = S.history.slice(0, -1), prev = JSON.parse(S.history[S.history.length - 1]);
+  S = {...prev, history:h, phase:'board', challenger:null, msg:'Last duel undone.'};
+  saveGame(); render();
+}
+
+/* ================= Duel ================= */
+// Each category keeps a shuffled deck that survives new games and refreshes:
+// every clue is shown once, in random order, before anything repeats.
+const decks = store.get('sq_decks') || {};
+function nextFromDeck(catId, n){
+  let d = decks[catId];
+  if (!d || !Array.isArray(d.left) || d.n !== n || !d.left.length){
+    const left = shuffle([...Array(n).keys()]);
+    if (d && d.last != null && n > 1 && left[left.length - 1] === d.last) [left[0], left[left.length - 1]] = [left[left.length - 1], left[0]];
+    d = decks[catId] = {n, left, last: d ? d.last : null};
+  }
+  const i = d.left.pop(); d.last = i;
+  store.set('sq_decks', decks);
+  return i;
+}
+function drawClue(catId){
+  if (D) D.seq = (D.seq || 0) + 1;
+  const c = cat(catId);
+  if (c.gen) return c.gen();
+  if (!c.items || !c.items.length) return drawClue(BUILTIN[0].id);
+  const ok = i => !c.items[i][0].startsWith('img:') || imgs[c.items[i][0].slice(4)];
+  let i;
+  for (let tries = 0; tries <= c.items.length; tries++){ i = nextFromDeck(catId, c.items.length); if (ok(i)) break; }
+  return {q:c.items[i][0], a:c.items[i][1], p:c.prompt || ''};
+}
+
+function startDuel(aId, bId){
+  const ms = S.seconds * 1000;
+  D = {a:aId, b:bId, cat:pl(bId).cat, chalCat:pl(aId).cat, time:{[aId]:ms, [bId]:ms}, max:ms,
+       active:null, phase:'pick', clue:null, passUntil:0, last:'', showAns:false, beeped:{}};
+  S.phase = 'duel'; S.challenger = null;
+  render();
+}
+
+function renderDuel(){
+  const a = pl(D.a), b = pl(D.b), c = cat(D.cat);
+  const panel = (p, role, k) => `<div class="pl" id="pl${k}" style="--c:${p.color}">
+      <div class="pl-role">${role}</div><div class="pl-name">${esc(p.name)}</div>
+      <div class="clock" id="clk${k}"></div><div class="tbar"><i id="bar${k}"></i></div></div>`;
+  app.innerHTML = `
+  <div class="screen duel-screen">
+    <div class="duel-head"><span class="eyebrow">Duel category</span><h1 class="duel-cat">${esc(c.name)}</h1></div>
+    <div class="arena">
+      ${panel(a, 'Challenger', 'A')}
+      <div class="stage${['photo', 'state', 'world'].includes(c.style) ? ' has-photo' : ''}">
+        <div class="turn" id="turn"></div>
+        <div class="prompt" id="prompt"></div>
+        <div class="clue ${c.style || 'text'}" id="clue"></div>
+        <div class="reveal" id="reveal"></div>
+        <div class="last" id="last"></div>
+      </div>
+      ${panel(b, 'Defender', 'B')}
+    </div>
+    <div class="controls">
+      <button class="btn good big" id="bOk">Correct <kbd>Space</kbd></button>
+      <button class="btn warn big" id="bPass">Pass (-${S.pass}s) <kbd>P</kbd></button>
+      <button class="btn ghost" id="bSkip">Skip bad clue <kbd>S</kbd></button>
+      <button class="btn ghost" id="bAns">Show answer to host <kbd>A</kbd></button>
+      <button class="btn ghost" id="bPause">Pause <kbd>Esc</kbd></button>
+    </div>
+    <div class="overlay" id="ov" hidden></div>
+  </div>`;
+  $('#bOk').onclick = correct; $('#bPass').onclick = pass; $('#bSkip').onclick = skip;
+  $('#bAns').onclick = toggleAns; $('#bPause').onclick = togglePause;
+  paintDuel(); updateClocks();
+}
+
+const fmt = ms => (Math.max(0, ms) / 1000).toFixed(1);
+function updateClocks(){
+  if (!D) return;
+  ['A','B'].forEach(k => {
+    const id = k === 'A' ? D.a : D.b, t = D.time[id], el = $('#clk' + k), bar = $('#bar' + k);
+    if (!el) return;
+    el.textContent = fmt(t);
+    el.classList.toggle('low', t < 5000 && D.active === id && (D.phase === 'run' || D.phase === 'pass'));
+    bar.style.width = (100 * Math.max(0, t) / D.max) + '%';
+  });
+}
+
+function paintDuel(){
+  if (!D || !$('#clue')) return;
+  $('#plA').classList.toggle('on', D.active === D.a);
+  $('#plB').classList.toggle('on', D.active === D.b);
+  const live = D.phase === 'run' || D.phase === 'pass';
+  $('#turn').innerHTML = live && D.active ? `<span style="color:${pl(D.active).color};filter:brightness(1.4)">${esc(pl(D.active).name)}</span> is on the clock` : '';
+  $('#prompt').textContent = live && D.clue ? (D.clue.p || '') : '';
+  const clue = $('#clue');
+  const cs = cat(D.cat).style || 'text', SH = SHAPES[cat(D.cat).shapes || 'states'] || {}, noLabel = cat(D.cat).shapes === 'countries';
+  clue.className = 'clue ' + (cs === 'auto' ? (D.clue && /[A-Za-z0-9]/.test(D.clue.q) ? 'text' : 'emoji') : cs === 'state' && !(D.clue && SH[D.clue.q]) ? 'text' : cs);
+  if (live && D.clue && cs === 'world'){
+    if (clue.dataset.q !== D.clue.q){ const svg = worldSVG(D.clue.q); clue.innerHTML = svg || '<div class="missing-ph">Map still loading. Press Skip.</div>'; clue.dataset.q = svg ? D.clue.q : ''; }
+  } else if (live && D.clue && cs === 'state' && noLabel && !SH[D.clue.q]){
+    clue.textContent = 'Map still loading. Press Skip.'; clue.dataset.q = '';
+  } else if (live && D.clue && cs === 'state' && SH[D.clue.q]){
+    if (clue.dataset.q !== D.clue.q){ const st = SH[D.clue.q]; clue.innerHTML = `<svg viewBox="${st.vb}" aria-hidden="true"><path d="${st.d}" fill-rule="evenodd"/></svg>${noLabel ? '' : `<div class="state-name">${esc(D.clue.q)}</div>`}`; }
+    clue.dataset.q = D.clue.q;
+  } else if (live && D.clue && cs === 'photo'){
+    const qq = String(D.clue.q), bank = qq.startsWith('pb:'), u = bank ? pbUrl(qq) : imgs[qq.slice(4)];
+    if (clue.dataset.q !== D.clue.q) clue.innerHTML = u ? `<img src="${u}" alt="">` : `<div class="missing-ph">${bank ? 'Loading photos…' : 'Photo missing. Press Skip.'}</div>`;
+    clue.dataset.q = u ? D.clue.q : '';
+  } else { clue.textContent = live && D.clue ? D.clue.q : ''; clue.dataset.q = ''; }
+  clue.classList.toggle('passing', D.phase === 'pass');
+  const rv = $('#reveal');
+  if (D.phase === 'pass'){ rv.className = 'reveal'; rv.textContent = D.clue.a || '(no answer)'; }
+  else if (D.showAns && live && D.clue){ rv.className = 'reveal host'; rv.textContent = 'Answer: ' + (D.clue.a || '—'); }
+  else { rv.className = 'reveal'; rv.textContent = ''; }
+  $('#last').innerHTML = D.last ? `${D.lastPass ? 'Passed. It was' : 'Last answer:'} <b${D.lastPass ? ' style="color:var(--warn)"' : ''}>${esc(D.last)}</b>` : '';
+  $('#bOk').disabled = D.phase !== 'run';
+  $('#bPass').disabled = D.phase !== 'run';
+  $('#bSkip').disabled = D.phase !== 'run';
+  $('#bAns').textContent = '';
+  $('#bAns').insertAdjacentHTML('beforeend', `${D.showAns ? 'Hide answer' : 'Show answer to host'} <kbd>A</kbd>`);
+  $('#bPause').innerHTML = `${D.phase === 'paused' ? 'Resume' : 'Pause'} <kbd>Esc</kbd>`;
+  paintOverlay();
+}
+
+function paintOverlay(){
+  const ov = $('#ov'), a = pl(D.a), b = pl(D.b);
+  const whoBtn = (p, id) => `<button class="btn big who" id="${id}" style="background:${p.color}">${esc(p.name)}</button>`;
+  if (D.phase === 'pick'){
+    ov.hidden = false;
+    ov.innerHTML = `<span class="eyebrow">${esc(a.name)} vs ${esc(b.name)} · ${esc(catName(D.cat))}</span>
+      <h2>Who goes first?</h2>
+      <div class="row" style="justify-content:center">${whoBtn(a, 'firstA')}${whoBtn(b, 'firstB')}</div>
+      <button class="btn ghost" id="cancelD">Cancel duel</button>`;
+    $('#firstA').onclick = () => countdown(D.a);
+    $('#firstB').onclick = () => countdown(D.b);
+    $('#cancelD').onclick = cancelDuel;
+  } else if (D.phase === 'count'){
+    ov.hidden = false;
+    ov.innerHTML = `<p>${esc(pl(D.active).name)} starts</p><div class="cd" id="cd">${D.cd}</div>`;
+  } else if (D.phase === 'paused'){
+    ov.hidden = false;
+    ov.innerHTML = `<h2>Paused</h2>
+      <button class="btn gold big" id="resumeD">Resume <kbd>Esc</kbd></button>
+      <p>Need to fix something? End the duel by hand:</p>
+      <div class="row" style="justify-content:center">
+        <button class="btn" id="winA">${esc(a.name)} wins</button>
+        <button class="btn" id="winB">${esc(b.name)} wins</button>
+        <button class="btn ghost" id="cancelD">Cancel duel, no change</button>
+      </div>`;
+    $('#resumeD').onclick = togglePause;
+    $('#winA').onclick = () => endDuel(D.a);
+    $('#winB').onclick = () => endDuel(D.b);
+    $('#cancelD').onclick = cancelDuel;
+  } else if (D.phase === 'done'){
+    const w = pl(D.winner), l = pl(D.winner === D.a ? D.b : D.a);
+    ov.hidden = false;
+    ov.innerHTML = `<span class="eyebrow">Time's up for ${esc(l.name)}</span>
+      <h2><span style="color:${w.color};filter:brightness(1.4)">${esc(w.name)}</span> wins the duel</h2>
+      <p>${esc(l.name)} is out. ${esc(w.name)} takes their squares.</p>
+      <button class="btn gold big" id="backB">Back to the board <kbd>Enter</kbd></button>`;
+    $('#backB').onclick = finishDuel;
+    $('#backB').focus();
+  } else { ov.hidden = true; ov.innerHTML = ''; }
+}
+
+function countdown(first){
+  D.active = first; D.phase = 'count'; D.cd = 3; paintDuel(); sfx.blip();
+  const t = setInterval(() => {
+    if (!D || D.phase !== 'count'){ clearInterval(t); return; }
+    D.cd--;
+    if (D.cd > 0){ const el = $('#cd'); if (el) el.textContent = D.cd; sfx.blip(); queueBroadcast(); }
+    else { clearInterval(t); sfx.go(); D.phase = 'run'; D.clue = drawClue(D.cat); paintDuel(); music.start(); }
+  }, 750);
+}
+
+function correct(){
+  if (!D || D.phase !== 'run') return;
+  sfx.ding(); D.last = D.clue.a || D.clue.q; D.lastPass = false;
+  D.active = D.active === D.a ? D.b : D.a;
+  D.clue = drawClue(D.cat); paintDuel();
+}
+function pass(){
+  if (!D || D.phase !== 'run') return;
+  sfx.pass();
+  const id = D.active;
+  D.time[id] -= S.pass * 1000; D.last = D.clue.a || D.clue.q; D.lastPass = true;
+  if (D.time[id] <= 0){ D.time[id] = 0; endDuel(id === D.a ? D.b : D.a); return; }
+  D.clue = drawClue(D.cat); paintDuel(); updateClocks();
+}
+function skip(){
+  if (!D || D.phase !== 'run') return;
+  D.clue = drawClue(D.cat); paintDuel();
+}
+function toggleAns(){ if (!D) return; D.showAns = !D.showAns; paintDuel(); }
+function togglePause(){
+  if (!D) return;
+  if (D.phase === 'run' || D.phase === 'pass'){ D.prev = D.phase; D.pausedAt = performance.now(); D.phase = 'paused'; music.stop(); }
+  else if (D.phase === 'paused'){ D.phase = D.prev; if (D.prev === 'pass') D.passUntil += performance.now() - D.pausedAt; music.start(); }
+  else return;
+  paintDuel(); updateClocks();
+}
+function endDuel(winner){
+  music.stop();
+  D.winner = winner; D.phase = 'done'; D.active = null;
+  sfx.buzz(); saveGame(); paintDuel(); updateClocks();
+}
+function cancelDuel(){ music.stop(); D = null; S.phase = 'board'; saveGame(); render(); }
+
+function finishDuel(){
+  if (!D || D.phase !== 'done') return;
+  const w = pl(D.winner), l = pl(D.winner === D.a ? D.b : D.a), wasChallenger = D.winner === D.a;
+  pushHistory();
+  S.cells = S.cells.map(o => o === l.id ? w.id : o);
+  l.alive = false;
+  w.cat = D.chalCat; // the category that wasn't played stays in the game
+  S.lastWinner = w.id;
+  S.msg = wasChallenger
+    ? `<em>${esc(w.name)}</em> knocked out ${esc(l.name)} and still defends <em>${esc(catName(w.cat))}</em>.`
+    : `<em>${esc(w.name)}</em> held off ${esc(l.name)} and now defends <em>${esc(catName(w.cat))}</em>.`;
+  D = null;
+  S.phase = alivePlayers().length === 1 ? 'champ' : 'board';
+  saveGame(); render();
+}
+
+let lastT = 0;
+function tick(t){
+  requestAnimationFrame(tick);
+  const dt = lastT ? Math.min(t - lastT, 250) : 0; lastT = t;
+  if (!D || !(D.phase === 'run' || D.phase === 'pass')) return;
+  const id = D.active;
+  D.time[id] -= dt;
+  music.intense = D.time[id] < 10000;
+  const sec = Math.ceil(D.time[id] / 1000);
+  if (sec <= 5 && sec > 0 && D.beeped[id] !== sec){ D.beeped[id] = sec; sfx.tick(); }
+  if (D.time[id] <= 0){ D.time[id] = 0; endDuel(id === D.a ? D.b : D.a); return; }
+  if (D.phase === 'pass' && t >= D.passUntil){ D.phase = 'run'; D.last = ''; D.clue = drawClue(D.cat); paintDuel(); }
+  updateClocks();
+}
+requestAnimationFrame(tick);
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, select')) return;
+  if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !REMOTE_CODE){ toggleFullscreen(); return; }
+  if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey && !REMOTE_CODE){ setTvZoom(tvZoom() + 0.1); return; }
+  if ((e.key === '-' || e.key === '_') && !e.metaKey && !e.ctrlKey && !REMOTE_CODE){ setTvZoom(tvZoom() - 0.1); return; }
+  if (!D) return;
+  const k = e.key.toLowerCase();
+  if (D.phase === 'done' && k === 'enter'){ e.preventDefault(); finishDuel(); return; }
+  if (k === ' ' || k === 'enter' || k === 'arrowright'){ e.preventDefault(); correct(); }
+  else if (k === 'p'){ pass(); }
+  else if (k === 's'){ skip(); }
+  else if (k === 'a'){ toggleAns(); }
+  else if (k === 'escape'){ togglePause(); }
+  else if (k === 'm'){ music.toggle(); }
+});
+
+/* ================= Champion ================= */
+function renderChamp(){
+  const w = alivePlayers()[0];
+  app.innerHTML = `
+  <div class="screen champ" style="--c:${w.color}">
+    <canvas id="conf"></canvas>
+    <div class="champ-inner">
+      <span class="eyebrow">Owns the whole board</span>
+      <h1>${esc(w.name)}</h1>
+      <p>is the Square Off champion</p>
+      <div class="row" style="justify-content:center;margin-top:10px">
+        <button class="btn gold big" id="again">Play again, same players</button>
+        <button class="btn" id="change">Change players</button>
+        ${S.history.length ? '<button class="btn ghost" id="undo">Undo last duel</button>' : ''}
+      </div>
+    </div>
+  </div>`;
+  $('#again').onclick = startGame;
+  $('#change').onclick = () => { S.phase = 'setup'; saveGame(); render(); };
+  const u = $('#undo'); if (u) u.onclick = undo;
+  sfx.fanfare(); confetti();
+}
+function confetti(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cv = $('#conf'); if (!cv) return;
+  const ctx = cv.getContext('2d'), dpr = devicePixelRatio || 1;
+  const W = cv.width = cv.clientWidth * dpr, H = cv.height = cv.clientHeight * dpr;
+  const parts = Array.from({length:220}, () => ({x:Math.random() * W, y:-Math.random() * H, vx:(Math.random() - .5) * 2 * dpr, vy:(2 + Math.random() * 3) * dpr, s:(5 + Math.random() * 7) * dpr, r:Math.random() * 6, vr:(Math.random() - .5) * .3, c:pick([...COLORS.slice(0, 10), '#ffc94d', '#ffffff'])}));
+  const end = performance.now() + 7000;
+  (function frame(now){
+    if (!document.body.contains(cv)) return;
+    ctx.clearRect(0, 0, W, H);
+    parts.forEach(p => { p.x += p.vx; p.y += p.vy; p.r += p.vr; if (p.y > H && now < end) { p.y = -20; p.x = Math.random() * W; }
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+    if (parts.some(p => p.y < H)) requestAnimationFrame(frame);
+  })(performance.now());
+}
+
+/* ================= Phone remote (host side + phone side) ================= */
+const REMOTE_CODE = (new URLSearchParams(location.search).get('remote') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const conns = new Set();
+let peer = null;
+function newRoom(){ const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; const c = Array.from({length:5}, () => a[rand(a.length)]).join(''); store.set('sq_room', c); return c; }
+let roomCode = store.get('sq_room') || newRoom();
+const peerId = code => 'squareoff-' + code.toLowerCase();
+const remoteURL = () => `${location.origin}${location.pathname}?remote=${roomCode}`;
+const stripTags = x => String(x || '').replace(/<[^>]*>/g, '');
+
+function clueForRemote(){
+  if (!D || !D.clue) return null;
+  const c = cat(D.cat), q = String(D.clue.q); let k = c.style || 'text';
+  if (k === 'photo'){ if (q.startsWith('pb:')) k = 'pb'; else return {k:'img', q:imgs[q.slice(4)] || '', a:D.clue.a, p:D.clue.p}; }
+  if (k === 'auto') k = /[A-Za-z0-9]/.test(q) ? 'text' : 'emoji';
+  return {k, q, a:D.clue.a, p:D.clue.p};
+}
+function viewModel(){
+  if (!S) return {phase:'setup'};
+  if (S.phase === 'duel' && D){
+    const P = id => { const p = pl(id); return {id, name:p.name, color:p.color, t:D.time[id]}; };
+    const live = D.phase === 'run' || D.phase === 'pass';
+    return {phase:'duel', duel:{cat:catName(D.cat), a:P(D.a), b:P(D.b), active:D.active, dphase:D.phase, cd:D.cd, seq:D.seq || 0,
+      clue: live ? clueForRemote() : null, last:D.last || '', lastPass:!!D.lastPass, winner:D.winner || null, pass:S.pass}};
+  }
+  if (S.phase === 'champ'){ const w = alivePlayers()[0]; return {phase:'champ', winner: w ? {name:w.name, color:w.color} : null, canUndo:S.history.length > 0}; }
+  if (S.phase !== 'board') return {phase:'setup'};
+  const counts = {}; S.cells.forEach(o => { counts[o] = (counts[o] || 0) + 1; });
+  const lw = S.lastWinner && pl(S.lastWinner);
+  return {phase:'board', board:{
+    players: alivePlayers().map(p => ({id:p.id, name:p.name, color:p.color, cat:catName(p.cat), n:counts[p.id] || 0})),
+    challenger:S.challenger, targets: S.challenger ? [...neighbors(S.challenger)] : [], lastWinner: lw && lw.alive ? lw.id : null,
+    msg:stripTags(S.msg), picking, flash:flashId, canUndo:S.history.length > 0}};
+}
+let bcastQueued = false;
+function queueBroadcast(){
+  if (bcastQueued || !conns.size) return;
+  bcastQueued = true;
+  setTimeout(() => { bcastQueued = false; const m = {type:'view', vm:viewModel()}; conns.forEach(c => { try { c.send(m); } catch {} }); }, 40);
+}
+setInterval(() => {
+  if (!conns.size || !D || !(D.phase === 'run' || D.phase === 'pass')) return;
+  const m = {type:'clock', a:D.time[D.a], b:D.time[D.b], active:D.active};
+  conns.forEach(c => { try { c.send(m); } catch {} });
+}, 200);
+// Anything that repaints the TV also refreshes the phone.
+{ const f = render; render = function(){ f(); queueBroadcast(); }; }
+{ const f = paintBoard; paintBoard = function(){ f(); queueBroadcast(); }; }
+{ const f = paintCallout; paintCallout = function(){ f(); queueBroadcast(); }; }
+{ const f = paintDuel; paintDuel = function(){ f(); queueBroadcast(); }; }
+
+function handleCmd(m){
+  if (!S || !m || !m.cmd) return;
+  const c = m.cmd;
+  if (D){
+    if ((c === 'correct' || c === 'pass' || c === 'skip') && m.seq !== D.seq) return;
+    if (c === 'correct') correct();
+    else if (c === 'pass') pass();
+    else if (c === 'skip') skip();
+    else if (c === 'pause') togglePause();
+    else if (c === 'first' && D.phase === 'pick' && (m.arg === D.a || m.arg === D.b)) countdown(m.arg);
+    else if (c === 'win' && D.phase === 'paused' && (m.arg === D.a || m.arg === D.b)) endDuel(m.arg);
+    else if (c === 'cancelDuel' && (D.phase === 'pick' || D.phase === 'paused')) cancelDuel();
+    else if (c === 'back' && D.phase === 'done') finishDuel();
+    return;
+  }
+  if (S.phase === 'champ'){ if (c === 'newGame') startGame(); else if (c === 'undo') undo(); return; }
+  if (S.phase !== 'board') return;
+  if (!document.querySelector('#board')) render();
+  if (c === 'undo') return undo();
+  if (picking) return;
+  if (c === 'random') randomPick();
+  else if (c === 'again' && S.lastWinner && pl(S.lastWinner) && pl(S.lastWinner).alive){ S.challenger = S.lastWinner; saveGame(); paintCallout(); paintBoard(); }
+  else if (c === 'chal' && pl(m.arg) && pl(m.arg).alive){ S.challenger = m.arg; saveGame(); paintCallout(); paintBoard(); }
+  else if (c === 'cancelChal'){ S.challenger = null; saveGame(); paintCallout(); paintBoard(); }
+  else if (c === 'target' && S.challenger && neighbors(S.challenger).has(m.arg)) startDuel(S.challenger, m.arg);
+}
+
+function initHost(tries = 0){
+  if (REMOTE_CODE || peer || !window.Peer) return;
+  try { peer = new Peer(peerId(roomCode), {debug:0}); } catch { peer = null; return; }
+  peer.on('connection', conn => {
+    conn.on('open', () => { conns.add(conn); try { conn.send({type:'view', vm:viewModel()}); } catch {} remoteStatus(); });
+    conn.on('data', m => { handleCmd(m); queueBroadcast(); });
+    const drop = () => { conns.delete(conn); remoteStatus(); };
+    conn.on('close', drop); conn.on('error', drop);
+  });
+  peer.on('disconnected', () => { try { if (!peer.destroyed) peer.reconnect(); } catch {} });
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id'){
+      try { peer.destroy(); } catch {} peer = null;
+      if (tries < 3) setTimeout(() => initHost(tries + 1), 4000);
+      else { roomCode = newRoom(); setTimeout(() => initHost(0), 300); }
+    }
+  });
+}
+function remoteStatus(){
+  document.body.classList.toggle('has-remote', conns.size > 0);
+  const b = $('#remoteBtn'); if (b){ b.classList.toggle('on-remote', conns.size > 0); b.textContent = conns.size ? 'Phone connected' : 'Phone remote'; }
+  const st = $('#remoteState'); if (st) st.innerHTML = `<span class="dot${conns.size ? ' on' : ''}"></span>${conns.size ? `${conns.size} phone${conns.size > 1 ? 's' : ''} connected` : 'Waiting for a phone…'}`;
+}
+function openRemoteModal(){
+  initHost();
+  const old = $('#remoteModal'); if (old) old.remove();
+  let qr = '';
+  try { const q = qrcode(0, 'M'); q.addData(remoteURL()); q.make(); qr = q.createSvgTag({cellSize:5, margin:2, scalable:true}); } catch {}
+  const m = document.createElement('div'); m.className = 'modal'; m.id = 'remoteModal';
+  m.innerHTML = `<div class="modal-card" role="dialog" aria-label="Phone remote">
+    <h2>Run the game from a phone</h2>
+    <p class="hint" style="margin:0">Scan this with the host's phone camera. The phone shows every answer and has the Correct and Pass buttons.</p>
+    ${qr ? `<div class="qr">${qr}</div>` : ''}
+    <div class="code">${roomCode}</div>
+    <div class="url">${esc(remoteURL())}</div>
+    <div id="remoteState"></div>
+    <p class="hint" style="margin:0">Keep the phone and this laptop on the same Wi-Fi. The remote works on your Vercel site, not inside Claude.</p>
+    <button class="btn gold" id="closeRemote">Done</button></div>`;
+  document.body.appendChild(m);
+  $('#closeRemote').onclick = () => m.remove();
+  m.addEventListener('click', e => { if (e.target === m) m.remove(); });
+  remoteStatus();
+}
+
+function bootRemote(code){
+  document.title = 'Square Off remote';
+  let rp = null, rc = null, vm = null, timer = null;
+  app.innerHTML = `<div class="remote">
+    <div class="r-head"><span class="logo">Square<b>.</b>Off</span><span id="rStat"><span class="dot"></span>Connecting…</span></div>
+    <div class="r-main" id="rMain"><div class="r-sub" style="margin:auto">Connecting to game ${esc(code)}…</div></div></div>`;
+  const setStat = (on, text) => { $('#rStat').innerHTML = `<span class="dot${on ? ' on' : ''}"></span>${esc(text)}`; };
+  const retry = (ms = 2000) => { clearTimeout(timer); timer = setTimeout(connect, ms); };
+  function connect(){
+    clearTimeout(timer);
+    try { if (rc) rc.close(); } catch {} try { if (rp) rp.destroy(); } catch {}
+    if (!window.Peer){ setStat(false, 'No internet connection'); return; }
+    rp = new Peer({debug:0});
+    rp.on('open', () => {
+      rc = rp.connect(peerId(code), {reliable:true});
+      rc.on('open', () => setStat(true, 'Connected'));
+      rc.on('data', onMsg);
+      rc.on('close', () => { setStat(false, 'Reconnecting…'); retry(); });
+      rc.on('error', () => { setStat(false, 'Reconnecting…'); retry(); });
+    });
+    rp.on('error', e => { setStat(false, e.type === 'peer-unavailable' ? 'Game not found. Open Phone remote on the TV.' : 'Reconnecting…'); retry(3000); });
+  }
+  function send(cmd, arg){
+    if (!rc || !rc.open){ setStat(false, 'Not connected. Retrying…'); connect(); return; }
+    try { rc.send({cmd, arg, seq: vm && vm.duel ? vm.duel.seq : 0}); } catch {}
+    if (navigator.vibrate) navigator.vibrate(25);
+  }
+  function onMsg(m){
+    if (!m) return;
+    if (m.type === 'view'){ vm = m.vm; draw(); }
+    else if (m.type === 'clock' && vm && vm.duel){ vm.duel.a.t = m.a; vm.duel.b.t = m.b; vm.duel.active = m.active; clocks(); }
+  }
+  window.onPBLoaded = () => { if (vm && vm.duel && vm.duel.clue && vm.duel.clue.k === 'pb') draw(); };
+  function clocks(){
+    const d = vm.duel;
+    [['A', d.a], ['B', d.b]].forEach(([k, p]) => {
+      const el = $('#rc' + k), box = $('#rp' + k); if (!el) return;
+      el.textContent = fmt(p.t);
+      el.classList.toggle('low', p.t < 5000 && d.active === p.id);
+      box.classList.toggle('on', d.active === p.id);
+    });
+  }
+  function clueHTML(c){
+    if (!c) return '';
+    if (c.k === 'pb'){ const u = pbUrl(c.q); return u ? `<img src="${u}" alt="">` : '<div class="r-txt" style="font-size:1rem">Loading photo…</div>'; }
+    if (c.k === 'img') return c.q ? `<img src="${c.q}" alt="">` : '';
+    if (c.k === 'world') return worldSVG(c.q) || '<div class="r-txt" style="font-size:1rem">Loading map…</div>';
+    if (c.k === 'state'){ const st = SHAPES.states[c.q]; return st ? `<svg viewBox="${st.vb}" aria-hidden="true"><path d="${st.d}" fill-rule="evenodd"/></svg>` : `<div class="r-txt">${esc(c.q)}</div>`; }
+    return `<div class="r-txt ${c.k}">${esc(c.q)}</div>`;
+  }
+  const chip = (p, cmd, extra = '') => `<button class="r-chip${extra}" data-cmd="${cmd}" data-arg="${p.id}" style="background:${p.color}">${esc(p.name)}<small>${esc(p.cat)} · ${p.n} square${p.n === 1 ? '' : 's'}</small></button>`;
+  function draw(){
+    const main = $('#rMain'); if (!vm || !main) return;
+    if (vm.phase === 'setup'){ main.innerHTML = '<div class="r-msg" style="margin:auto">The game is being set up on the TV.</div>'; return; }
+    if (vm.phase === 'champ'){
+      main.innerHTML = `<div class="r-label" style="margin-top:auto">Champion</div>
+        <div class="r-msg" style="font-size:2.2rem;font-family:var(--display);color:${vm.winner ? vm.winner.color : 'var(--gold)'};filter:brightness(1.35)">${esc(vm.winner ? vm.winner.name : '')}</div>
+        <button class="r-btn gold" data-cmd="newGame" style="margin-top:auto">Play again, same players</button>
+        ${vm.canUndo ? '<button class="r-btn" data-cmd="undo">Undo last duel</button>' : ''}`;
+      return;
+    }
+    if (vm.phase === 'board'){
+      const b = vm.board, byId = id => b.players.find(p => p.id === id);
+      let h = '';
+      if (b.picking){
+        const f = byId(b.flash);
+        h = `<div class="r-msg" style="margin-top:20px">Picking a player…</div>${f ? `<div class="r-chips">${chip(f, '', ' flash')}</div>` : ''}`;
+      } else if (b.challenger && byId(b.challenger)){
+        const c = byId(b.challenger);
+        h = `<div class="r-msg"><em>${esc(c.name)}</em> is challenging. Who do they take on?</div>
+          <div class="r-chips">${b.targets.map(id => byId(id)).filter(Boolean).map(p => chip(p, 'target')).join('')}</div>
+          <button class="r-btn" data-cmd="cancelChal">Choose a different challenger</button>`;
+      } else {
+        const w = b.lastWinner && byId(b.lastWinner);
+        h = `${b.msg ? `<div class="r-msg">${esc(b.msg)}</div>` : ''}
+          <button class="r-btn gold" data-cmd="random">Pick a random player</button>
+          ${w ? `<button class="r-btn" data-cmd="again">${esc(w.name)} challenges again</button>` : ''}
+          <div class="r-label">Or choose the challenger · ${b.players.length} left</div>
+          <div class="r-chips">${b.players.map(p => chip(p, 'chal')).join('')}</div>
+          ${b.canUndo ? '<button class="r-btn" data-cmd="undo">Undo last duel</button>' : ''}`;
+      }
+      main.innerHTML = h; return;
+    }
+    const d = vm.duel, A = d.a, B = d.b;
+    const pc = (p, k) => `<div class="r-pl${d.active === p.id ? ' on' : ''}" id="rp${k}" style="--c:${p.color}"><b style="color:${p.color};filter:brightness(1.4)">${esc(p.name)}</b><div class="r-clk" id="rc${k}">${fmt(p.t)}</div></div>`;
+    const head = `<div class="r-label">${esc(d.cat)}</div><div class="r-players">${pc(A, 'A')}${pc(B, 'B')}</div>`;
+    const who = p => `<button class="r-btn who" data-cmd="first" data-arg="${p.id}" style="background:${p.color}">${esc(p.name)}</button>`;
+    if (d.dphase === 'pick'){
+      main.innerHTML = `${head}<div class="r-msg" style="margin-top:12px">Who goes first?</div>${who(A)}${who(B)}<button class="r-btn" data-cmd="cancelDuel" style="margin-top:auto">Cancel duel</button>`;
+    } else if (d.dphase === 'count'){
+      main.innerHTML = `${head}<div class="r-cd" style="margin:auto">${d.cd || ''}</div>`;
+    } else if (d.dphase === 'paused'){
+      main.innerHTML = `${head}<div class="r-msg" style="margin-top:12px">Paused</div>
+        <button class="r-btn gold" data-cmd="pause">Resume</button>
+        <div class="r-label" style="margin-top:10px">Fix a mistake by ending the duel</div>
+        <button class="r-btn" data-cmd="win" data-arg="${A.id}">${esc(A.name)} wins</button>
+        <button class="r-btn" data-cmd="win" data-arg="${B.id}">${esc(B.name)} wins</button>
+        <button class="r-btn" data-cmd="cancelDuel">Cancel duel, no change</button>`;
+    } else if (d.dphase === 'done'){
+      const w = d.winner === A.id ? A : B, l = d.winner === A.id ? B : A;
+      main.innerHTML = `${head}<div class="r-msg" style="margin-top:auto;font-size:1.6rem"><span style="color:${w.color};filter:brightness(1.4)">${esc(w.name)}</span> wins the duel</div>
+        <div class="r-sub">${esc(l.name)} is out.</div><button class="r-btn gold" data-cmd="back" style="margin-top:auto">Back to the board</button>`;
+    } else {
+      const c = d.clue || {};
+      main.innerHTML = `${head}
+        <div class="r-card">
+          ${c.p ? `<div class="r-sub">${esc(c.p)}</div>` : ''}
+          <div class="r-clue ${esc(c.k || '')}">${clueHTML(c)}</div>
+          ${c.k === 'state' ? `<div class="r-sub" style="color:var(--fg);font-weight:700">${esc(c.q)}</div>` : ''}
+          <div class="r-label">Answer</div>
+          <div class="r-ans">${esc(c.a || '—')}</div>
+          ${d.last ? `<div class="r-sub">${d.lastPass ? 'Passed' : 'Last'}: ${esc(d.last)}</div>` : ''}
+        </div>
+        <div class="r-actions">
+          <button class="r-btn good" data-cmd="correct">Correct</button>
+          <button class="r-btn warn" data-cmd="pass">Pass (-${d.pass}s)</button>
+          <button class="r-btn" data-cmd="skip">Skip clue</button>
+          <button class="r-btn" data-cmd="pause">Pause</button>
+        </div>`;
+    }
+  }
+  $('#rMain').addEventListener('click', e => { const b = e.target.closest('[data-cmd]'); if (b && b.dataset.cmd) send(b.dataset.cmd, b.dataset.arg); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible'){ requestWake(); if (!rc || !rc.open) connect(); } });
+  requestWake(); connect();
+}
+
+/* ================= Wake lock & boot ================= */
+async function requestWake(){ try { await navigator.wakeLock?.request('screen'); } catch {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S && S.phase !== 'setup') requestWake(); });
+if (!REMOTE_CODE) applyTv();
+if (REMOTE_CODE) bootRemote(REMOTE_CODE);
+else {
+  if (S && S.phase === 'duel') S.phase = 'board';
+  (async () => {
+    try { imgs = await Promise.race([idb.getAll(), new Promise((_, rej) => setTimeout(rej, 2500))]) || {}; } catch {}
+    render(); initHost();
+  })();
+}
+</script>

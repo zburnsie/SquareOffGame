@@ -1,0 +1,19 @@
+const { chromium } = require('playwright-core');
+(async () => {
+  const b = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+  const pg = await (await b.newContext({ viewport: { width: 1400, height: 900 } })).newPage();
+  const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto('http://localhost:8765/index.html'); await pg.waitForSelector('#pn-0');
+  await pg.waitForFunction(() => PHOTO_CATS.length > 0);
+  console.log('manifest linked:', await pg.$eval('link[rel=manifest]', l => l.href));
+  await pg.fill('#pn-0', 'Ann'); await pg.press('#pn-0', 'Enter'); await pg.fill('#pn-1', 'Ben');
+  await pg.click('#mixCats'); await pg.click('#start'); await pg.waitForSelector('#board .cell');
+  await pg.waitForTimeout(400);
+  console.log('full screen after Start:', await pg.evaluate(() => !!document.fullscreenElement));
+  await pg.keyboard.press('f'); await pg.waitForTimeout(400);
+  console.log('after F:', await pg.evaluate(() => !!document.fullscreenElement));
+  await pg.keyboard.press('f'); await pg.waitForTimeout(400);
+  console.log('after F again:', await pg.evaluate(() => !!document.fullscreenElement));
+  console.log('errors:', errs.length ? errs : 'none');
+  await b.close();
+})().catch(e => { console.error('TEST FAILED:', e.message); process.exit(1); });
