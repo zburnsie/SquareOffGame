@@ -11,7 +11,12 @@ PROMPTS = {
     "Famous Dishes": "Name the dish", "Harry Potter Characters": "Which Harry Potter character?",
     "Arts and Crafts": "Name the craft", "Toys": "Name the toy", "Landmarks": "Name the landmark",
     "Pokémon": "Who's that Pokémon?", "Makeup": "Name the makeup item", "Cereal": "Name the cereal",
-    "Minecraft": "Name this Minecraft thing", "General Science": "Name it", "Girl Pop Singers": "Who is this singer?",
+    "Minecraft": "Name this Minecraft thing", "General Science": "Name it", "Pop Stars": "Who is this pop star?",
+    "NBA Players": "Who is this NBA player?", "NFL Players": "Who is this NFL player?",
+    "Gilmore Girls Characters": "Which Gilmore Girls character?", "MCU Characters": "Which Marvel character?",
+    "Movie Posters": "Name the movie", "Christmas Movies": "Name the Christmas movie", "Cartoon Characters": "Which cartoon character?",
+    "Dog Breeds": "Name the dog breed", "Commercial Mascots": "Name the mascot", "Human Anatomy": "Name the body part",
+    "Musical Instruments": "Name the instrument", "Flowers": "Name the flower", "Ballroom Dance": "Name the dance",
 }
 ORDER = list(PROMPTS)
 
