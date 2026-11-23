@@ -14,6 +14,33 @@ Musical Instruments|Electric guitar|cs:Fender Stratocaster guitar
 Musical Instruments|Banjo|cs:five-string banjo
 Musical Instruments|Harp|cs:concert pedal harp
 Musical Instruments|Drum kit|cs:drum kit set
+Ballroom Dance|Waltz|cs:waltz ballroom dance couple competition
+Ballroom Dance|Foxtrot|cs:foxtrot ballroom dancesport couple
+Ballroom Dance|Quickstep|cs:quickstep dancesport couple
+Ballroom Dance|Rumba|cs:rumba dancesport couple
+Ballroom Dance|Paso Doble|cs:paso doble dancesport couple
+Ballroom Dance|Swing|cs:swing dance couple
+Ballroom Dance|Bachata|cs:bachata dance couple
+Ballroom Dance|Polka|cs:polka dancing couple
+Ballroom Dance|Two-Step|cs:country two-step dance couple
+Ballroom Dance|Jitterbug|cs:jitterbug dance
+Commercial Mascots|GEICO Gecko|cs:GEICO gecko mascot
+Commercial Mascots|Aflac Duck|cs:Aflac duck plush
+Commercial Mascots|M&M's characters|cs:M&M's characters World store
+Commercial Mascots|Jolly Green Giant|cs:Jolly Green Giant statue Blue Earth Minnesota
+Commercial Mascots|Michelin Man|cs:Michelin Man Bibendum mascot costume
+Commercial Mascots|Mr. Peanut|cs:Mr. Peanut costume mascot
+Commercial Mascots|Grimace|cs:Grimace McDonald's costume
+Commercial Mascots|Energizer Bunny|cs:Energizer Bunny balloon
+Commercial Mascots|LiMu Emu (Liberty Mutual)|cs:LiMu Emu
+Commercial Mascots|Lucky the Leprechaun|cs:Lucky the Leprechaun mascot
+Commercial Mascots|The Burger King|cs:Burger King mascot king costume
+Commercial Mascots|Captain Morgan|cs:Captain Morgan statue mascot
+Commercial Mascots|Big Boy|cs:Big Boy statue restaurant
+Commercial Mascots|Mr. Peanut|cs:Mr Peanut statue
+Pop Stars (more)|Ed Sheeran|wp:Ed Sheeran
+Pop Stars (more)|Elton John|wp:Elton John
+Pop Stars (more)|Nick Jonas|wp:Nick Jonas
 Human Anatomy|Nose|wp:Human nose
 Human Anatomy|Lips|wp:Lip
 Human Anatomy|Belly button|wp:Navel
