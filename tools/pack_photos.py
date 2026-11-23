@@ -3,7 +3,7 @@ import base64, io, json, os, re, sys, unicodedata
 from PIL import Image
 
 SRC = os.path.expanduser("~/Desktop/Square Off Photos Final")
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site", "photos")
+OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "photos")  # the repo's photos/
 PROMPTS = {
     "Actors": "Who is this?", "Animals": "Name the animal", "Disney Characters": "Which Disney character?",
     "Famous Athletes": "Who is this?", "Fruits and Vegetables": "Name it", "Kitchen Items": "Name the kitchen item",
