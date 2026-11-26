@@ -17,6 +17,7 @@ PROMPTS = {
     "Movie Posters": "Name the movie", "Christmas Movies": "Name the Christmas movie", "Cartoon Characters": "Which cartoon character?",
     "Dog Breeds": "Name the dog breed", "Commercial Mascots": "Name the mascot", "Human Anatomy": "Name the body part",
     "Musical Instruments": "Name the instrument", "Flowers": "Name the flower", "Ballroom Dance": "Name the dance",
+    "Bluey": "Which Bluey character?", "Argentina": "Name this Argentine person, place, or thing",
 }
 ORDER = list(PROMPTS)
 
