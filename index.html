@@ -1365,7 +1365,9 @@ fetch('photos/index.json').then(r => r.json()).then(async list => {
   for (const c of list) await loadPB(c.id);
 }).catch(() => {});
 const allCats = () => [...PHOTO_CATS, ...BUILTIN, ...custom];
-const cat = id => allCats().find(c => c.id === id) || BUILTIN[0];
+// Categories that were renamed keep working in saved games.
+const RENAMED = {'ph-girl-pop-singers':'ph-pop-stars'};
+const cat = id => allCats().find(c => c.id === (RENAMED[id] || id)) || BUILTIN[0];
 const catName = id => cat(id).name;
 const saveCustom = () => store.set('sq_custom', custom);
 
@@ -1476,6 +1478,8 @@ const saveDraft = () => store.set('sq_draft', draft);
 const saveGame = () => store.set('sq_game', S);
 const pl = id => S.players.find(p => p.id === id);
 if (!draft.photoMig){ draft.rows.forEach(r => { if (PHOTO_FOR[r.cat]) r.cat = PHOTO_FOR[r.cat]; }); draft.photoMig = true; saveDraft(); }
+draft.rows.forEach(r => { if (RENAMED[r.cat]) r.cat = RENAMED[r.cat]; });
+if (S) S.players.forEach(p => { if (RENAMED[p.cat]) p.cat = RENAMED[p.cat]; });
 if (S && !S.photoMig){ S.players.forEach(p => { if (PHOTO_FOR[p.cat]) p.cat = PHOTO_FOR[p.cat]; }); S.photoMig = true; saveGame(); }
 const alivePlayers = () => S.players.filter(p => p.alive);
 
