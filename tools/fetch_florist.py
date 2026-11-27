@@ -28,7 +28,7 @@ for ans, q in FLOWERS.items():
     if any(f.startswith(ans + "~") for f in os.listdir(OUT)): continue
     try:
         r = json.loads(get("https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode(dict(action="query", generator="search",
-            gsrsearch=q + " filetype:bitmap", gsrnamespace=6, gsrlimit=3, prop="imageinfo", iiprop="url", iiurlwidth=960, format="json", formatversion="2"))))
+            gsrsearch=q + " filetype:bitmap", gsrnamespace=6, gsrlimit=2, prop="imageinfo", iiprop="url", iiurlwidth=960, format="json", formatversion="2"))))
         pages = sorted(r.get("query", {}).get("pages", []), key=lambda p: p.get("index", 0))
         for i, pg in enumerate(pages, 1):
             u = pg["imageinfo"][0].get("thumburl")

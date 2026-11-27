@@ -2362,9 +2362,19 @@ function handleCmd(m){
   else if (c === 'target' && S.challenger && neighbors(S.challenger).has(m.arg)) startDuel(S.challenger, m.arg);
 }
 
+// STUN finds a direct route; the TURN relays carry the connection when a direct route is blocked
+// (cellular data, guest Wi-Fi, some routers).
+const PEER_OPTS = {debug:0, config:{iceServers:[
+  {urls:['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']},
+  {urls:['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username:'peerjs', credential:'peerjsp'},
+  {urls:['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443?transport=tcp'], username:'openrelayproject', credential:'openrelayproject'},
+]}};
+let hostState = 'starting';   // starting | ready | busy | offline
 function initHost(tries = 0){
   if (REMOTE_CODE || peer || !window.Peer) return;
-  try { peer = new Peer(peerId(roomCode), {debug:0}); } catch { peer = null; return; }
+  hostState = 'starting'; remoteStatus();
+  try { peer = new Peer(peerId(roomCode), PEER_OPTS); } catch { peer = null; hostState = 'offline'; remoteStatus(); return; }
+  peer.on('open', () => { hostState = 'ready'; remoteStatus(); });
   peer.on('connection', conn => {
     conn.on('open', () => { conns.add(conn); try { conn.send({type:'view', vm:viewModel()}); } catch {} remoteStatus(); });
     conn.on('data', m => { handleCmd(m); queueBroadcast(); });
@@ -2374,16 +2384,24 @@ function initHost(tries = 0){
   peer.on('disconnected', () => { try { if (!peer.destroyed) peer.reconnect(); } catch {} });
   peer.on('error', e => {
     if (e.type === 'unavailable-id'){
-      try { peer.destroy(); } catch {} peer = null;
-      if (tries < 3) setTimeout(() => initHost(tries + 1), 4000);
-      else { roomCode = newRoom(); setTimeout(() => initHost(0), 300); }
+      // Another open copy of the game (an old tab, or another device) already holds this room code.
+      // Don't wait for it: switch to a fresh code right away and refresh the QR code if it's showing.
+      try { peer.destroy(); } catch {} peer = null; hostState = 'busy';
+      roomCode = newRoom(); setTimeout(() => { initHost(0); if ($('#remoteModal')) openRemoteModal(); }, 300);
+    } else if (['network', 'server-error', 'socket-error', 'socket-closed'].includes(e.type)){
+      try { peer.destroy(); } catch {} peer = null; hostState = 'offline'; remoteStatus();
+      setTimeout(() => initHost(tries + 1), Math.min(10000, 2000 * (tries + 1)));
     }
   });
 }
 function remoteStatus(){
   document.body.classList.toggle('has-remote', conns.size > 0);
   const b = $('#remoteBtn'); if (b){ b.classList.toggle('on-remote', conns.size > 0); b.textContent = conns.size ? 'Phone connected' : 'Phone remote'; }
-  const st = $('#remoteState'); if (st) st.innerHTML = `<span class="dot${conns.size ? ' on' : ''}"></span>${conns.size ? `${conns.size} phone${conns.size > 1 ? 's' : ''} connected` : 'Waiting for a phone…'}`;
+  const msg = conns.size ? `${conns.size} phone${conns.size > 1 ? 's' : ''} connected`
+    : hostState === 'ready' ? 'Ready. Scan the code with the phone.'
+    : hostState === 'offline' ? 'Can\'t reach the remote service. Check this computer\'s internet; retrying…'
+    : 'Getting ready…';
+  const st = $('#remoteState'); if (st) st.innerHTML = `<span class="dot${conns.size || hostState === 'ready' ? ' on' : ''}"></span>${msg}`;
 }
 function openRemoteModal(){
   initHost();
@@ -2394,6 +2412,7 @@ function openRemoteModal(){
   m.innerHTML = `<div class="modal-card" role="dialog" aria-label="Phone remote">
     <h2>Run the game from a phone</h2>
     <p class="hint" style="margin:0">Scan this with the host's phone camera. The phone shows every answer and has the Correct and Pass buttons.</p>
+    ${/^(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(location.hostname) ? '<p class="err" style="margin:0">This is the local copy on this computer, so a phone can\'t reach it. Open the game from your Vercel link to use the phone remote.</p>' : ''}
     ${qr ? `<div class="qr">${qr}</div>` : ''}
     <div class="code">${roomCode}</div>
     <div class="url">${esc(remoteURL())}</div>
@@ -2408,7 +2427,7 @@ function openRemoteModal(){
 
 function bootRemote(code){
   document.title = 'Square Off remote';
-  let rp = null, rc = null, vm = null, timer = null;
+  let rp = null, rc = null, vm = null, timer = null, stuck = null, attempts = 0;
   app.innerHTML = `<div class="remote">
     <div class="r-head"><span class="logo">Square<b>.</b>Off</span><span id="rStat"><span class="dot"></span>Connecting…</span></div>
     <div class="r-main" id="rMain"><div class="r-sub" style="margin:auto">Connecting to game ${esc(code)}…</div></div></div>`;
@@ -2418,10 +2437,18 @@ function bootRemote(code){
     clearTimeout(timer);
     try { if (rc) rc.close(); } catch {} try { if (rp) rp.destroy(); } catch {}
     if (!window.Peer){ setStat(false, 'No internet connection'); return; }
-    rp = new Peer({debug:0});
+    rp = new Peer(PEER_OPTS);
+    attempts++;
+    clearTimeout(stuck);
+    stuck = setTimeout(() => {
+      if (rc && rc.open) return;
+      setStat(false, 'Still connecting…');
+      if (attempts >= 2) $('#rMain').innerHTML = `<div class="r-msg" style="margin:auto;text-align:center">Can't reach the game yet.<br><br>On the TV, open <b>Phone remote</b> and check the code says <b>${esc(code)}</b>. If it shows a different code, scan the new QR code.<br><br>Only keep one copy of the game open, and try the phone on the same Wi-Fi as the TV.</div>`;
+      connect();
+    }, 10000);
     rp.on('open', () => {
       rc = rp.connect(peerId(code), {reliable:true});
-      rc.on('open', () => setStat(true, 'Connected'));
+      rc.on('open', () => { clearTimeout(stuck); attempts = 0; setStat(true, 'Connected'); });
       rc.on('data', onMsg);
       rc.on('close', () => { setStat(false, 'Reconnecting…'); retry(); });
       rc.on('error', () => { setStat(false, 'Reconnecting…'); retry(); });
