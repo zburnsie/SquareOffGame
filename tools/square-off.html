@@ -174,6 +174,9 @@ textarea{min-height:120px; resize:vertical; font-family:var(--mono); font-size:.
 .clue.world path.hit{fill:var(--gold); stroke:#fff; stroke-width:2}
 .clue.world.passing{opacity:.35}
 /* ---------- Phone remote ---------- */
+.r-ans.pending{opacity:.4}
+.r-clue.pending{opacity:.35}
+.r-actions .r-btn{touch-action:manipulation; -webkit-tap-highlight-color:transparent}
 .modal{position:fixed; inset:0; z-index:20; background:color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter:blur(6px); display:grid; place-items:center; padding:24px}
 .modal-card{background:var(--bg2); border:1px solid var(--line); border-radius:18px; padding:24px; max-width:420px; width:100%; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center}
 .modal-card h2{font-family:var(--display); font-weight:800; margin:0; font-size:1.6rem; text-wrap:balance}
@@ -2285,7 +2288,7 @@ function viewModel(){
   if (S.phase === 'duel' && D){
     const P = id => { const p = pl(id); return {id, name:p.name, color:p.color, t:D.time[id]}; };
     const live = D.phase === 'run' || D.phase === 'pass';
-    return {phase:'duel', duel:{cat:catName(D.cat), a:P(D.a), b:P(D.b), active:D.active, dphase:D.phase, cd:D.cd, seq:D.seq || 0,
+    return {phase:'duel', duel:{cat:catName(D.cat), catId:D.cat, a:P(D.a), b:P(D.b), active:D.active, dphase:D.phase, cd:D.cd, seq:D.seq || 0,
       clue: live ? clueForRemote() : null, last:D.last || '', lastPass:!!D.lastPass, winner:D.winner || null, pass:S.pass}};
   }
   if (S.phase === 'champ'){ const w = alivePlayers()[0]; return {phase:'champ', winner: w ? {name:w.name, color:w.color} : null, canUndo:S.history.length > 0}; }
@@ -2293,7 +2296,7 @@ function viewModel(){
   const counts = {}; S.cells.forEach(o => { counts[o] = (counts[o] || 0) + 1; });
   const lw = S.lastWinner && pl(S.lastWinner);
   return {phase:'board', board:{
-    players: alivePlayers().map(p => ({id:p.id, name:p.name, color:p.color, cat:catName(p.cat), n:counts[p.id] || 0})),
+    players: alivePlayers().map(p => ({id:p.id, name:p.name, color:p.color, cat:catName(p.cat), catId:p.cat, n:counts[p.id] || 0})),
     challenger:S.challenger, targets: S.challenger ? [...neighbors(S.challenger)] : [], lastWinner: lw && lw.alive ? lw.id : null,
     msg:stripTags(S.msg), picking, flash:flashId, canUndo:S.history.length > 0}};
 }
@@ -2301,7 +2304,7 @@ let bcastQueued = false;
 function queueBroadcast(){
   if (bcastQueued || !conns.size) return;
   bcastQueued = true;
-  setTimeout(() => { bcastQueued = false; const m = {type:'view', vm:viewModel()}; conns.forEach(c => { try { c.send(m); } catch {} }); }, 40);
+  setTimeout(() => { bcastQueued = false; const m = {type:'view', vm:viewModel()}; conns.forEach(c => { try { c.send(m); } catch {} }); }, 0);
 }
 setInterval(() => {
   if (!conns.size || !D || !(D.phase === 'run' || D.phase === 'pass')) return;
@@ -2407,14 +2410,43 @@ function bootRemote(code){
     });
     rp.on('error', e => { setStat(false, e.type === 'peer-unavailable' ? 'Game not found. Open Phone remote on the TV.' : 'Reconnecting…'); retry(3000); });
   }
+  // Correct / Pass / Skip: the phone advances its own clue counter right away, so quick back-to-back
+  // taps all count even before the TV's update arrives. A second tap within 350 ms is treated as an
+  // accidental double tap and ignored.
+  const ACT = new Set(['correct', 'pass', 'skip']);
+  let lastAct = 0, optSeq = 0, optAt = 0;
   function send(cmd, arg){
     if (!rc || !rc.open){ setStat(false, 'Not connected. Retrying…'); connect(); return; }
-    try { rc.send({cmd, arg, seq: vm && vm.duel ? vm.duel.seq : 0}); } catch {}
+    if (ACT.has(cmd)){
+      const now = performance.now();
+      if (now - lastAct < 350 || !vm || !vm.duel || !vm.duel.clue) return;
+      lastAct = now;
+      const d = vm.duel;
+      try { rc.send({cmd, arg, seq:d.seq}); } catch { return; }
+      d.seq = (d.seq || 0) + 1; optSeq = d.seq; optAt = now;
+      if (cmd === 'correct') d.active = d.active === d.a.id ? d.b.id : d.a.id;
+      const ans = $('.r-ans'); if (ans){ ans.textContent = '…'; ans.classList.add('pending'); }
+      const img = $('.r-clue'); if (img) img.classList.add('pending');
+      clocks();
+    } else {
+      try { rc.send({cmd, arg, seq: vm && vm.duel ? vm.duel.seq : 0}); } catch {}
+    }
     if (navigator.vibrate) navigator.vibrate(25);
   }
+  // Load a category's photos before its duel starts.
+  const preload = id => { if (id && String(id).startsWith('ph-')) loadPB(id); };
   function onMsg(m){
     if (!m) return;
-    if (m.type === 'view'){ vm = m.vm; draw(); }
+    if (m.type === 'view'){
+      vm = m.vm;
+      // An update sent just before her tap reached the TV can arrive after it; don't let it undo the tap.
+      const stale = vm.duel && vm.duel.seq < optSeq && performance.now() - optAt < 1500;
+      if (stale) vm.duel.seq = optSeq;
+      draw();
+      if (stale){ const a = $('.r-ans'); if (a){ a.textContent = '…'; a.classList.add('pending'); } }
+      if (vm.duel) preload(vm.duel.catId);
+      else if (vm.board && vm.board.challenger) vm.board.targets.forEach(id => { const p = vm.board.players.find(x => x.id === id); if (p) preload(p.catId); });
+    }
     else if (m.type === 'clock' && vm && vm.duel){ vm.duel.a.t = m.a; vm.duel.b.t = m.b; vm.duel.active = m.active; clocks(); }
   }
   window.onPBLoaded = () => { if (vm && vm.duel && vm.duel.clue && vm.duel.clue.k === 'pb') draw(); };
@@ -2506,7 +2538,17 @@ function bootRemote(code){
         </div>`;
     }
   }
-  $('#rMain').addEventListener('click', e => { const b = e.target.closest('[data-cmd]'); if (b && b.dataset.cmd) send(b.dataset.cmd, b.dataset.arg); });
+  // Correct / Pass / Skip fire the moment a finger touches the button (not on release), so a screen
+  // update mid-tap can't swallow the press. Everything else stays on a normal click.
+  $('#rMain').addEventListener('pointerdown', e => {
+    const b = e.target.closest('[data-cmd]'); if (!b || !ACT.has(b.dataset.cmd)) return;
+    e.preventDefault(); send(b.dataset.cmd, b.dataset.arg);
+  });
+  $('#rMain').addEventListener('click', e => {
+    const b = e.target.closest('[data-cmd]'); if (!b || !b.dataset.cmd) return;
+    if (ACT.has(b.dataset.cmd) && e.detail !== 0) return;   // already handled on pointerdown (keyboard still works)
+    send(b.dataset.cmd, b.dataset.arg);
+  });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible'){ requestWake(); if (!rc || !rc.open) connect(); } });
   requestWake(); connect();
 }

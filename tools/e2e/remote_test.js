@@ -62,9 +62,18 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const ans3 = (await ph.textContent('.r-ans')).trim();
   console.log(`after Pass -> clock ${t0} -> ${t1} (dropped ${(t0 - t1).toFixed(1)}s) | new answer: ${ans3} | TV last line: ${(await tv.textContent('#last')).trim()}`);
 
+  // fast back-to-back taps 400 ms apart (faster than the TV update would previously allow) must all count
+  const s0 = await tv.evaluate(() => D.seq);
+  for (let i = 0; i < 3; i++){ await ph.dispatchEvent('[data-cmd="correct"]', 'pointerdown'); await sleep(400); }
+  await sleep(500);
+  console.log('3 quick Correct taps (400ms apart) advanced clues by', (await tv.evaluate(() => D.seq)) - s0, '(want 3)');
+  // tap, then tap again before any update arrives: block the network round trip by tapping within 150 ms
+  const s1 = await tv.evaluate(() => D.seq);
+  await ph.dispatchEvent('[data-cmd="pass"]', 'pointerdown'); await sleep(120); await ph.dispatchEvent('[data-cmd="pass"]', 'pointerdown'); await sleep(600);
+  console.log('accidental double tap of Pass (120ms) advanced clues by', (await tv.evaluate(() => D.seq)) - s1, '(want 1)');
   // double tap Correct quickly: should advance only once
   const seqA = await tv.evaluate(() => D.seq);
-  await Promise.all([ph.click('[data-cmd="correct"]'), ph.click('[data-cmd="correct"]')]); await sleep(700);
+  await ph.dispatchEvent('[data-cmd="correct"]','pointerdown'); await ph.dispatchEvent('[data-cmd="correct"]','pointerdown'); await sleep(700);
   const seqB = await tv.evaluate(() => D.seq);
   console.log('double tap Correct advanced clues by', seqB - seqA);
 
