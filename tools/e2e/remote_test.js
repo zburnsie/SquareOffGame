@@ -9,6 +9,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const tvCtx = await browser.newContext({ viewport: { width: 1400, height: 860 } });
   const phCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const tv = await tvCtx.newPage(), ph = await phCtx.newPage();
+  if (process.env.RELAY_ONLY) await phCtx.route(/peerjs/, r => r.abort());   // phone can't use the direct route at all
   const errs = [];
   tv.on('pageerror', e => errs.push('TV: ' + e.message));
   ph.on('pageerror', e => errs.push('PHONE: ' + e.message));
@@ -29,7 +30,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(2500); // host registers with broker
 
   await ph.goto(URL + '?remote=' + code);
-  await ph.waitForFunction(() => /Connected/.test(document.querySelector('#rStat')?.textContent || ''), null, { timeout: 30000 });
+  await ph.waitForFunction(() => /Connected/.test(document.querySelector('#rStat')?.textContent || ''), null, { timeout: 45000 });
   console.log('phone connected; TV says:', (await tv.textContent('#remoteState')).trim());
   await tv.click('#closeRemote');
   await ph.waitForSelector('[data-cmd="random"]');

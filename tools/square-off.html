@@ -2356,7 +2356,66 @@ const PEER_OPTS = {debug:0, config:{iceServers:[
   {urls:['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443?transport=tcp'], username:'openrelayproject', credential:'openrelayproject'},
 ]}};
 let hostState = 'starting';   // starting | ready | busy | offline
+
+// Second route: a public message relay over a normal secure web connection. It works on any network,
+// including cellular and Wi-Fi that keeps devices apart, where the direct connection above can fail.
+// The TV and phone use both routes at once; the phone uses whichever reaches the TV first.
+const RELAY_BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
+let mqttLib = null;
+function loadMqtt(){
+  return mqttLib || (mqttLib = new Promise((res, rej) => {
+    if (window.mqtt) return res(window.mqtt);
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js';
+    sc.onload = () => res(window.mqtt); sc.onerror = () => { mqttLib = null; rej(new Error('relay library')); };
+    document.head.appendChild(sc);
+  }));
+}
+const relayTopic = (code, to) => `squareoff-v1/${String(code).toLowerCase()}/${to}`;   // to: 'tv' | 'phone'
+function relayConnect(subTopic, onMsg, onState){
+  let client = null, i = 0, closed = false;
+  const start = async () => {
+    const lib = await loadMqtt().catch(() => null);
+    if (closed) return;
+    if (!lib){ setTimeout(start, 4000); return; }
+    const c = client = lib.connect(RELAY_BROKERS[i % RELAY_BROKERS.length], {connectTimeout:8000, reconnectPeriod:0, clean:true, keepalive:20});
+    let failed = false;
+    c.on('connect', () => { c.subscribe(subTopic, {qos:0}); onState(true); });
+    c.on('message', (t, buf) => { try { onMsg(JSON.parse(buf.toString())); } catch {} });
+    const fail = () => { if (failed) return; failed = true; onState(false); try { c.end(true); } catch {} if (!closed){ i++; setTimeout(start, 1500); } };
+    c.on('close', fail); c.on('offline', fail); c.on('error', () => {});
+  };
+  start();
+  return {
+    get up(){ return !!(client && client.connected); },
+    publish(topic, obj){ if (!client || !client.connected) return false; try { client.publish(topic, JSON.stringify(obj), {qos:0}); return true; } catch { return false; } },
+    end(){ closed = true; try { client && client.end(true); } catch {} },
+  };
+}
+
+// TV side of the relay. All relay phones share one "connection" in conns.
+let relay = null, relayUp = false;
+const relayPhones = new Map();   // phone id -> last heard (ms)
+const relayConn = {send(m){ if (relay) relay.publish(relayTopic(roomCode, 'phone'), m); }};
+function initRelay(){
+  if (REMOTE_CODE || relay) return;
+  relay = relayConnect(relayTopic(roomCode, 'tv'), m => {
+    if (!m || !m.from) return;
+    relayPhones.set(m.from, Date.now());
+    if (!conns.has(relayConn)){ conns.add(relayConn); remoteStatus(); }
+    if (m.hello) relayConn.send({type:'view', vm:viewModel()});
+    if (m.cmd){ handleCmd(m); queueBroadcast(); }
+  }, up => { relayUp = up; remoteStatus(); });
+}
+function resetRelay(){ if (relay){ relay.end(); relay = null; relayUp = false; } relayPhones.clear(); conns.delete(relayConn); initRelay(); }
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, t] of relayPhones) if (now - t > 15000) relayPhones.delete(id);
+  if (!relayPhones.size && conns.has(relayConn)){ conns.delete(relayConn); remoteStatus(); }
+}, 5000);
+const phoneCount = () => Math.max([...conns].filter(c => c !== relayConn).length, relayPhones.size);
 function initHost(tries = 0){
+  initRelay();
   if (REMOTE_CODE || peer || !window.Peer) return;
   hostState = 'starting'; remoteStatus();
   try { peer = new Peer(peerId(roomCode), PEER_OPTS); } catch { peer = null; hostState = 'offline'; remoteStatus(); return; }
@@ -2373,7 +2432,7 @@ function initHost(tries = 0){
       // Another open copy of the game (an old tab, or another device) already holds this room code.
       // Don't wait for it: switch to a fresh code right away and refresh the QR code if it's showing.
       try { peer.destroy(); } catch {} peer = null; hostState = 'busy';
-      roomCode = newRoom(); setTimeout(() => { initHost(0); if ($('#remoteModal')) openRemoteModal(); }, 300);
+      roomCode = newRoom(); resetRelay(); setTimeout(() => { initHost(0); if ($('#remoteModal')) openRemoteModal(); }, 300);
     } else if (['network', 'server-error', 'socket-error', 'socket-closed'].includes(e.type)){
       try { peer.destroy(); } catch {} peer = null; hostState = 'offline'; remoteStatus();
       setTimeout(() => initHost(tries + 1), Math.min(10000, 2000 * (tries + 1)));
@@ -2381,13 +2440,14 @@ function initHost(tries = 0){
   });
 }
 function remoteStatus(){
-  document.body.classList.toggle('has-remote', conns.size > 0);
-  const b = $('#remoteBtn'); if (b){ b.classList.toggle('on-remote', conns.size > 0); b.textContent = conns.size ? 'Phone connected' : 'Phone remote'; }
-  const msg = conns.size ? `${conns.size} phone${conns.size > 1 ? 's' : ''} connected`
-    : hostState === 'ready' ? 'Ready. Scan the code with the phone.'
+  const n = phoneCount(), ready = hostState === 'ready' || relayUp;
+  document.body.classList.toggle('has-remote', n > 0);
+  const b = $('#remoteBtn'); if (b){ b.classList.toggle('on-remote', n > 0); b.textContent = n ? 'Phone connected' : 'Phone remote'; }
+  const msg = n ? `${n} phone${n > 1 ? 's' : ''} connected`
+    : ready ? 'Ready. Scan the code with the phone.'
     : hostState === 'offline' ? 'Can\'t reach the remote service. Check this computer\'s internet; retrying…'
     : 'Getting ready…';
-  const st = $('#remoteState'); if (st) st.innerHTML = `<span class="dot${conns.size || hostState === 'ready' ? ' on' : ''}"></span>${msg}`;
+  const st = $('#remoteState'); if (st) st.innerHTML = `<span class="dot${n || ready ? ' on' : ''}"></span>${msg}`;
 }
 function openRemoteModal(){
   initHost();
@@ -2414,6 +2474,27 @@ function openRemoteModal(){
 function bootRemote(code){
   document.title = 'Square Off remote';
   let rp = null, rc = null, vm = null, timer = null, stuck = null, attempts = 0;
+  const myId = Math.random().toString(36).slice(2, 10);
+  let relayLive = false;   // true once a TV message has arrived over the relay
+  const linked = () => (rc && rc.open) || relayLive;
+  const showLinked = () => setStat(true, 'Connected');
+  const relayP = relayConnect(relayTopic(code, 'phone'), m => {
+    if (!relayLive){ relayLive = true; clearTimeout(stuck); attempts = 0; showLinked(); }
+    lastRelay = Date.now(); onMsg(m);
+  }, up => { if (up) relayP.publish(relayTopic(code, 'tv'), {from:myId, hello:1}); else { relayLive = false; if (!linked()) setStat(false, 'Reconnecting…'); } });
+  let lastRelay = 0;
+  // Keep the TV aware of this phone, and ask for the current screen until one arrives.
+  setInterval(() => {
+    if (!relayP.up) return;
+    relayP.publish(relayTopic(code, 'tv'), vm ? {from:myId, ping:1} : {from:myId, hello:1});
+    if (relayLive && Date.now() - lastRelay > 20000){ relayLive = false; if (!linked()) setStat(false, 'Reconnecting…'); }
+  }, 3000);
+  // One route for commands, so a tap never counts twice: direct if it's open, otherwise the relay.
+  const transmit = obj => {
+    if (rc && rc.open){ try { rc.send(obj); return true; } catch {} }
+    if (relayP.up) return relayP.publish(relayTopic(code, 'tv'), {...obj, from:myId});
+    return false;
+  };
   app.innerHTML = `<div class="remote">
     <div class="r-head"><span class="logo">Square<b>.</b>Off</span><span id="rStat"><span class="dot"></span>Connecting…</span></div>
     <div class="r-main" id="rMain"><div class="r-sub" style="margin:auto">Connecting to game ${esc(code)}…</div></div></div>`;
@@ -2427,19 +2508,19 @@ function bootRemote(code){
     attempts++;
     clearTimeout(stuck);
     stuck = setTimeout(() => {
-      if (rc && rc.open) return;
+      if (linked()) return;
       setStat(false, 'Still connecting…');
       if (attempts >= 2) $('#rMain').innerHTML = `<div class="r-msg" style="margin:auto;text-align:center">Can't reach the game yet.<br><br>On the TV, open <b>Phone remote</b> and check the code says <b>${esc(code)}</b>. If it shows a different code, scan the new QR code.<br><br>Only keep one copy of the game open, and try the phone on the same Wi-Fi as the TV.</div>`;
       connect();
     }, 10000);
     rp.on('open', () => {
       rc = rp.connect(peerId(code), {reliable:true});
-      rc.on('open', () => { clearTimeout(stuck); attempts = 0; setStat(true, 'Connected'); });
+      rc.on('open', () => { clearTimeout(stuck); attempts = 0; showLinked(); });
       rc.on('data', onMsg);
-      rc.on('close', () => { setStat(false, 'Reconnecting…'); retry(); });
-      rc.on('error', () => { setStat(false, 'Reconnecting…'); retry(); });
+      rc.on('close', () => { if (!linked()) setStat(false, 'Reconnecting…'); retry(); });
+      rc.on('error', () => { if (!linked()) setStat(false, 'Reconnecting…'); retry(); });
     });
-    rp.on('error', e => { setStat(false, e.type === 'peer-unavailable' ? 'Game not found. Open Phone remote on the TV.' : 'Reconnecting…'); retry(3000); });
+    rp.on('error', e => { if (!linked()) setStat(false, e.type === 'peer-unavailable' ? 'Game not found. Open Phone remote on the TV.' : 'Reconnecting…'); retry(e.type === 'peer-unavailable' ? 6000 : 3000); });
   }
   // Correct / Pass / Skip: the phone advances its own clue counter right away, so quick back-to-back
   // taps all count even before the TV's update arrives. A second tap within 350 ms is treated as an
@@ -2447,20 +2528,20 @@ function bootRemote(code){
   const ACT = new Set(['correct', 'pass', 'skip']);
   let lastAct = 0, optSeq = 0, optAt = 0;
   function send(cmd, arg){
-    if (!rc || !rc.open){ setStat(false, 'Not connected. Retrying…'); connect(); return; }
+    if (!linked()){ setStat(false, 'Not connected. Retrying…'); connect(); return; }
     if (ACT.has(cmd)){
       const now = performance.now();
       if (now - lastAct < 350 || !vm || !vm.duel || !vm.duel.clue) return;
       lastAct = now;
       const d = vm.duel;
-      try { rc.send({cmd, arg, seq:d.seq}); } catch { return; }
+      if (!transmit({cmd, arg, seq:d.seq})) return;
       d.seq = (d.seq || 0) + 1; optSeq = d.seq; optAt = now;
       if (cmd === 'correct') d.active = d.active === d.a.id ? d.b.id : d.a.id;
       const ans = $('.r-ans'); if (ans){ ans.textContent = '…'; ans.classList.add('pending'); }
       const img = $('.r-clue'); if (img) img.classList.add('pending');
       clocks();
     } else {
-      try { rc.send({cmd, arg, seq: vm && vm.duel ? vm.duel.seq : 0}); } catch {}
+      transmit({cmd, arg, seq: vm && vm.duel ? vm.duel.seq : 0});
     }
     if (navigator.vibrate) navigator.vibrate(25);
   }
@@ -2580,7 +2661,7 @@ function bootRemote(code){
     if (ACT.has(b.dataset.cmd) && e.detail !== 0) return;   // already handled on pointerdown (keyboard still works)
     send(b.dataset.cmd, b.dataset.arg);
   });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible'){ requestWake(); if (!rc || !rc.open) connect(); } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible'){ requestWake(); if (!rc || !rc.open) connect(); if (relayP.up) relayP.publish(relayTopic(code, 'tv'), {from:myId, hello:1}); } });
   requestWake(); connect();
 }
 
