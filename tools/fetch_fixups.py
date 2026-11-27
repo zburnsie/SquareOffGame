@@ -4,60 +4,13 @@ import json, os, re, subprocess, sys, time, urllib.parse
 OUT = os.path.expanduser("~/Desktop/Square Off Photos/_candidates")
 UA = "SquareOffPartyGame/1.0 (personal party trivia)"
 ITEMS = [l.split("|") for l in """
-Flowers|Rose|cs:red rose flower bloom
-Flowers|Daffodil|cs:yellow daffodil Narcissus pseudonarcissus flower
-Flowers|Daisy|cs:Leucanthemum vulgare flower
-Flowers|Hydrangea|cs:Hydrangea macrophylla blue flowers
-Flowers|Peony|cs:Paeonia lactiflora pink flower
-Musical Instruments|Acoustic guitar|cs:acoustic guitar steel string
-Musical Instruments|Electric guitar|cs:Fender Stratocaster guitar
-Musical Instruments|Banjo|cs:five-string banjo
-Musical Instruments|Harp|cs:concert pedal harp
-Musical Instruments|Drum kit|cs:drum kit set
-Ballroom Dance|Waltz|cs:waltz ballroom dance couple competition
-Ballroom Dance|Foxtrot|cs:foxtrot ballroom dancesport couple
-Ballroom Dance|Quickstep|cs:quickstep dancesport couple
-Ballroom Dance|Rumba|cs:rumba dancesport couple
-Ballroom Dance|Paso Doble|cs:paso doble dancesport couple
-Ballroom Dance|Swing|cs:swing dance couple
-Ballroom Dance|Bachata|cs:bachata dance couple
-Ballroom Dance|Polka|cs:polka dancing couple
-Ballroom Dance|Two-Step|cs:country two-step dance couple
-Ballroom Dance|Jitterbug|cs:jitterbug dance
-Commercial Mascots|GEICO Gecko|cs:GEICO gecko mascot
-Commercial Mascots|Aflac Duck|cs:Aflac duck plush
-Commercial Mascots|M&M's characters|cs:M&M's characters World store
-Commercial Mascots|Jolly Green Giant|cs:Jolly Green Giant statue Blue Earth Minnesota
-Commercial Mascots|Michelin Man|cs:Michelin Man Bibendum mascot costume
-Commercial Mascots|Mr. Peanut|cs:Mr. Peanut costume mascot
-Commercial Mascots|Grimace|cs:Grimace McDonald's costume
-Commercial Mascots|Energizer Bunny|cs:Energizer Bunny balloon
-Commercial Mascots|LiMu Emu (Liberty Mutual)|cs:LiMu Emu
-Commercial Mascots|Lucky the Leprechaun|cs:Lucky the Leprechaun mascot
-Commercial Mascots|The Burger King|cs:Burger King mascot king costume
-Commercial Mascots|Captain Morgan|cs:Captain Morgan statue mascot
-Commercial Mascots|Big Boy|cs:Big Boy statue restaurant
-Commercial Mascots|Mr. Peanut|cs:Mr Peanut statue
-Pop Stars (more)|Ed Sheeran|wp:Ed Sheeran
-Pop Stars (more)|Elton John|wp:Elton John
-Pop Stars (more)|Nick Jonas|wp:Nick Jonas
-Human Anatomy|Nose|wp:Human nose
-Human Anatomy|Lips|wp:Lip
-Human Anatomy|Belly button|wp:Navel
-Human Anatomy|Knee|wp:Knee
-Human Anatomy|Elbow|wp:Elbow
-Human Anatomy|Thumb|wp:Thumb
-Human Anatomy|Eyebrow|wp:Eyebrow
-Human Anatomy|Eyelashes|wp:Eyelash
-Human Anatomy|Fingerprint|wp:Fingerprint
-Human Anatomy|Toes|wp:Toe
-Human Anatomy|Skull|wp:Human skull
-Human Anatomy|Skeleton|wp:Human skeleton
-Human Anatomy|Hair|wp:Hair
-Human Anatomy|Chin|wp:Chin
-Human Anatomy|Wrist|wp:Wrist
-Human Anatomy|Shoulder|wp:Shoulder
-Human Anatomy|Freckles|wp:Freckle
+Office Supplies|Sticky notes|cs:yellow sticky notes pad
+Office Supplies|Highlighter|cs:highlighter pens fluorescent
+Office Supplies|Ruler|cs:wooden ruler 30 cm
+Office Supplies|Composition notebook|cs:marble composition notebook
+Office Supplies|Legal pad|cs:yellow legal pad
+Office Supplies|Correction tape|cs:correction tape dispenser
+Office Supplies|Calculator|cs:desk calculator
 """.strip().splitlines()]
 
 def get(url):

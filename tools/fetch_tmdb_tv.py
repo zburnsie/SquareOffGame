@@ -104,6 +104,6 @@ for cat, txt in SPEC.items():
             open(os.path.join(d, safe(title) + ".jpg"), "wb").write(get("https://media.themoviedb.org/t/p/w780/" + ids[0]))
             log.append(f"{line} -> {mid.group(1)}")
         except Exception as e: miss.append(f"{line} [{e}]")
-        time.sleep(0.6)
+        time.sleep(2.5)
     print(f"{cat}: {len(os.listdir(d))} saved; missing: {'; '.join(miss) or 'none'}", flush=True)
 print("\n".join(log))

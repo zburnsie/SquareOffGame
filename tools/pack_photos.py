@@ -18,6 +18,7 @@ PROMPTS = {
     "Dog Breeds": "Name the dog breed", "Commercial Mascots": "Name the mascot", "Human Anatomy": "Name the body part",
     "Musical Instruments": "Name the instrument", "Flowers": "Name the flower", "Ballroom Dance": "Name the dance",
     "Bluey": "Which Bluey character?", "Argentina": "Name this Argentine person, place, or thing",
+    "Mario Characters": "Which Mario character?", "Office Supplies": "Name the office supply", "2000s Kids Shows": "Name the show",
 }
 ORDER = list(PROMPTS)
 
